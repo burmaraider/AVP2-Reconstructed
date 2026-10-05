@@ -126,7 +126,6 @@ LightmapPage *FUN_10034142(RenderContext *pContext)
 	}
 
 	TextureFormat *pFormat = d3d_GetLightmapTextureFormat();
-	TextureFormat *pFormat = d3d_GetLightmapTextureFormat();
 	if (!pFormat)
 	{
 		dfree(pPage);

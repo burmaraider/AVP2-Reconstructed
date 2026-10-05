@@ -46,33 +46,33 @@ int DAT_100796ec;
 // GLOBAL: D3DREN 0x100796f0
 int DAT_100796f0;
 
-// ---- lightmap pages (the RenderContext holds the page list; FUN_10034597 builds it, FUN_100347ac frees it) ----------------------
+// ---- lightmap pages (the RenderContext holds the page list; FUN_10034597 builds it, FreeLightmapPages frees it) ----------------------
 
 // guess: looks for a free rectangle of w x h texels (multiples of 4: the page's bitmap has one bit per 4x4 cell) in the pages
 // of the context; on success returns 1 with the position and the page.  (The declaration order and `h * w` pin the register allocation:
 // found with tools/permute.py.)
 // FUNCTION: D3DREN 0x10034000
-int FUN_10034000(RenderContext *pContext, uint32 w, uint32 h, uint32 *pX, uint32 *pY, UnkType_LMPage **ppPage)
+int FUN_10034000(RenderContext *pContext, uint32 w, uint32 h, uint32 *pX, uint32 *pY, LightmapPage **ppPage)
 {
 	uint32 nTexels;
-	UnkType_LMPage *pPage;
+	LightmapPage *pPage;
 	uint32 x, y, dx, dy, iCell;
 	int bFree;
 	nTexels = h * w;
 
-	pPage = pContext->m_Unk00;
+	pPage = pContext->m_pLightmapPages;
 	for (;;)
 	{
 		if (pPage)
 		{
-			if (pPage->m_Unk10 >= nTexels)
+			if (pPage->m_nUsedTexels >= nTexels)
 			{
 				for (y = 0; y < 0x41 - h; y += 4)
 				{
 					for (x = 0; x < 0x41 - w; x += 4)
 					{
 						iCell = (y >> 2) * 0x40 + (x >> 2);
-						if (!(pPage->m_Unk0c[iCell >> 3] & (1 << (iCell & 7))))
+						if (!(pPage->m_pOccupancyMap[iCell >> 3] & (1 << (iCell & 7))))
 						{
 							bFree = 1;
 							for (dx = 0; dx < w; dx += 4)
@@ -80,7 +80,7 @@ int FUN_10034000(RenderContext *pContext, uint32 w, uint32 h, uint32 *pX, uint32
 								for (dy = 0; dy < h; dy += 4)
 								{
 									iCell = ((dy + y) >> 2) * 0x40 + ((dx + x) >> 2);
-									if (pPage->m_Unk0c[iCell >> 3] & (1 << (iCell & 7)))
+									if (pPage->m_pOccupancyMap[iCell >> 3] & (1 << (iCell & 7)))
 									{
 										bFree = 0;
 										break;
@@ -101,7 +101,7 @@ int FUN_10034000(RenderContext *pContext, uint32 w, uint32 h, uint32 *pX, uint32
 					}
 				}
 			}
-			pPage = pPage->m_Unk24;
+			pPage = pPage->m_pNext;
 		}
 		else
 			break;
@@ -112,14 +112,14 @@ int FUN_10034000(RenderContext *pContext, uint32 w, uint32 h, uint32 *pX, uint32
 
 // guess: allocates a lightmap page with its 64x64 texture surface and puts it at the head of the context's page list.
 // FUNCTION: D3DREN 0x10034142
-UnkType_LMPage *FUN_10034142(RenderContext *pContext)
+LightmapPage *FUN_10034142(RenderContext *pContext)
 {
-	UnkType_LMPage *pPage = new UnkType_LMPage;
+	LightmapPage *pPage = new LightmapPage;
 	if (!pPage)
 		return 0;
 
-	pPage->m_Unk0c = (uint8 *)dalloc_z(0x80);
-	if (!pPage->m_Unk0c)
+	pPage->m_pOccupancyMap = (uint8 *)dalloc_z(0x80);
+	if (!pPage->m_pOccupancyMap)
 	{
 		dfree(pPage);
 		return 0;
@@ -132,7 +132,7 @@ UnkType_LMPage *FUN_10034142(RenderContext *pContext)
 		return 0;
 	}
 
-	pPage->m_Unk14 = pFormat->m_Unk30 << 12;
+	pPage->m_nMemoryUse = pFormat->m_Unk30 << 12;
 
 	DDSURFACEDESC2 ddsd;
 	memset(&ddsd, 0, sizeof(ddsd));
@@ -145,54 +145,54 @@ UnkType_LMPage *FUN_10034142(RenderContext *pContext)
 	ddsd.dwHeight = 0x40;
 	memcpy(&ddsd.ddpfPixelFormat, &pFormat->m_DDPF, sizeof(DDPIXELFORMAT));
 
-	if (DAT_10057810->CreateSurface(&ddsd, (LPDIRECTDRAWSURFACE7 *)&pPage->m_Unk1c, NULL) != DD_OK)
+	if (DAT_10057810->CreateSurface(&ddsd, (LPDIRECTDRAWSURFACE7 *)&pPage->m_pSurface, NULL) != DD_OK)
 	{
-		dfree(pPage->m_Unk0c);
+		dfree(pPage->m_pOccupancyMap);
 		dfree(pPage);
 		AddDebugMessage(4, "Unable to create (%dx%d) lightmap page.", 0x40, 0x40);
 		return 0;
 	}
 
-	pPage->m_Unk24 = pContext->m_Unk00;
-	pContext->m_Unk04++;
-	pContext->m_Unk00 = pPage;
+	pPage->m_pNext = pContext->m_pLightmapPages;
+	pContext->m_nLightmapPages++;
+	pContext->m_pLightmapPages = pPage;
 	DAT_100796e8 += 0x2000;
-	*(int *)((uint8 *)g_pStruct + 0x50) += pPage->m_Unk14;
+	*(int *)((uint8 *)g_pStruct + 0x50) += pPage->m_nMemoryUse;
 	return pPage;
 }
 
 // FUNCTION: D3DREN 0x1003424d
-UnkType_LMPage::UnkType_LMPage()
+LightmapPage::LightmapPage()
 {
 	m_Unk04 = 0;
 	m_Unk08 = 0;
-	m_Unk0c = 0;
-	m_Unk10 = 0;
-	m_Unk14 = 0;
+	m_pOccupancyMap = 0;
+	m_nUsedTexels = 0;
+	m_nMemoryUse = 0;
 	m_Unk18 = 0;
-	m_Unk1c = 0;
-	m_Unk24 = 0;
+	m_pSurface = 0;
+	m_pNext = 0;
 	m_Unk20 = 1;
 }
 
 // FUNCTION: D3DREN 0x10034277
-int UnkType_LMPage::FUN_vslot1()
+int LightmapPage::IsRTexture()
 {
 	return 0;
 }
 
-int UnkType_LMPage::IsFullbrite()
+int LightmapPage::IsFullbrite()
 {
 	return 0;
 }
 
 // FUNCTION: D3DREN 0x1003427a
-int UnkType_LMPage::GetBaseWidth()
+int LightmapPage::GetBaseWidth()
 {
 	return 0x40;
 }
 
-int UnkType_LMPage::GetBaseHeight()
+int LightmapPage::GetBaseHeight()
 {
 	return 0x40;
 }
@@ -208,7 +208,7 @@ int UnkType_LMPage::GetBaseHeight()
 // STUB: D3DREN 0x1003429b
 int FUN_1003429b(RenderContext *pContext, WorldPoly *pPoly)
 {
-	UnkType_LMPage *pPage;
+	LightmapPage *pPage;
 	uint32 x, y;
 	uint32 i, j, iCell;
 	LTVector P, Q;
@@ -248,9 +248,9 @@ int FUN_1003429b(RenderContext *pContext, WorldPoly *pPoly)
 			for (i = 0; i < pPoly->m_LMWidth; i++)
 			{
 				iCell = ((j + y) >> 2) * 0x40 + ((x + i) >> 2);
-				pCell = &pPage->m_Unk0c[iCell >> 3];
+				pCell = &pPage->m_pOccupancyMap[iCell >> 3];
 				*pCell |= 1 << (iCell & 7);
-				pPage->m_Unk10++;
+				pPage->m_nUsedTexels++;
 			}
 		}
 
@@ -262,17 +262,17 @@ int FUN_1003429b(RenderContext *pContext, WorldPoly *pPoly)
 		while (pVert != pEnd)
 		{
 			LTVector d = *pVert->m_Vec - pPoly->m_Unknown38;
-			float fU = (P.y * d.y + P.x * d.x + P.z * d.z) / pContext->m_Unk08->m_LMGridSize + 0.5f;
+			float fU = (P.y * d.y + P.x * d.x + P.z * d.z) / pContext->m_pWorld->m_LMGridSize + 0.5f;
 			SPOLYVERTEX_UNK0C(pVert) = fU;
 			SPOLYVERTEX_UNK0C(pVert) = (fU + (float)(int)x) * fScale;
-			SPOLYVERTEX_UNK10(pVert) = ((Q.z * d.z + Q.y * d.y + Q.x * d.x) / pContext->m_Unk08->m_LMGridSize + (float)(int)y) * fScale + 0.0078125f;
+			SPOLYVERTEX_UNK10(pVert) = ((Q.z * d.z + Q.y * d.y + Q.x * d.x) / pContext->m_pWorld->m_LMGridSize + (float)(int)y) * fScale + 0.0078125f;
 			pVert++;
 		}
 
 		WORLDPOLY_UNK4E(pPoly) = (uint8)x;
 		WORLDPOLY_UNK4F(pPoly) = (uint8)y;
 		DAT_100796ec += pPoly->m_LMHeight * pPoly->m_LMWidth * 2;
-		WORLDPOLY_UNK48(pPoly) = pPage;
+		WORLDPOLY_LMPAGE(pPoly) = pPage;
 	}
 
 	return 1;
@@ -332,16 +332,16 @@ LTBOOL vq_DefaultBoolFn()
 
 // guess: frees the occupancy bitmaps of all pages.
 // FUNCTION: D3DREN 0x1003451f
-void FUN_1003451f(RenderContext *pContext)
+void FreeLightmapPageBitmaps(RenderContext *pContext)
 {
-	UnkType_LMPage *pPage;
+	LightmapPage *pPage;
 
-	for (pPage = pContext->m_Unk00; pPage; pPage = pPage->m_Unk24)
+	for (pPage = pContext->m_pLightmapPages; pPage; pPage = pPage->m_pNext)
 	{
-		if (pPage->m_Unk0c)
+		if (pPage->m_pOccupancyMap)
 		{
-			dfree(pPage->m_Unk0c);
-			pPage->m_Unk0c = 0;
+			dfree(pPage->m_pOccupancyMap);
+			pPage->m_pOccupancyMap = 0;
 		}
 	}
 }
@@ -369,7 +369,7 @@ void FUN_10034543(WorldBsp *pBsp)
 // STUB: D3DREN 0x10034597
 int FUN_10034597(RenderContext *pContext)
 {
-	MainWorld *pWorld = pContext->m_Unk08;
+	MainWorld *pWorld = pContext->m_pWorld;
 	uint32 i, j;
 	WorldBsp *pBsp;
 	LightAnim *pAnim;
@@ -417,7 +417,7 @@ int FUN_10034597(RenderContext *pContext)
 		}
 	}
 
-	FUN_1003451f(pContext);
+	FreeLightmapPageBitmaps(pContext);
 
 	for (i = 0; i < pWorld->m_WorldModels.GetSize(); i++)
 	{
@@ -432,7 +432,7 @@ int FUN_10034597(RenderContext *pContext)
 			}
 			else
 			{
-				WORLDPOLY_UNK48(pPoly) = 0;
+				WORLDPOLY_LMPAGE(pPoly) = 0;
 			}
 		}
 	}
@@ -442,45 +442,45 @@ int FUN_10034597(RenderContext *pContext)
 	return 1;
 
 Failed:
-	FUN_100347ac(pContext);
+	FreeLightmapPages(pContext);
 	return 0;
 }
 
 // guess: forgets the page of every polygon of a BSP.
 // FUNCTION: D3DREN 0x10034783
-void FUN_10034783(WorldBsp *pBsp)
+void ClearPolyLightmapPages(WorldBsp *pBsp)
 {
 	uint32 i;
 
 	for (i = 0; i < pBsp->m_nPolies; i++)
-		WORLDPOLY_UNK48(pBsp->m_Polies[i]) = 0;
+		WORLDPOLY_LMPAGE(pBsp->m_Polies[i]) = 0;
 }
 
 // guess: frees the pages of a context (surfaces, bitmaps, page objects) and forgets them in the world's polygons.
 // FUNCTION: D3DREN 0x100347ac
-void FUN_100347ac(RenderContext *pContext)
+void FreeLightmapPages(RenderContext *pContext)
 {
-	UnkType_LMPage *pPage, *pNext;
+	LightmapPage *pPage, *pNext;
 	uint32 i;
 
-	FUN_1003451f(pContext);
+	FreeLightmapPageBitmaps(pContext);
 
-	for (pPage = pContext->m_Unk00; pPage; pPage = pNext)
+	for (pPage = pContext->m_pLightmapPages; pPage; pPage = pNext)
 	{
-		IDirectDrawSurface7 *pSurface = pPage->m_Unk1c;
-		pNext = pPage->m_Unk24;
+		IDirectDrawSurface7 *pSurface = pPage->m_pSurface;
+		pNext = pPage->m_pNext;
 		if (pSurface)
 		{
 			pSurface->Release();
-			*(int *)((uint8 *)g_pStruct + 0x50) -= pPage->m_Unk14;
+			*(int *)((uint8 *)g_pStruct + 0x50) -= pPage->m_nMemoryUse;
 		}
 		delete pPage;
 	}
 
-	pContext->m_Unk00 = 0;
+	pContext->m_pLightmapPages = 0	;
 
-	for (i = 0; i < pContext->m_Unk08->m_WorldModels.GetSize(); i++)
-		FUN_10034783(pContext->m_Unk08->m_WorldModels[i]->m_pOriginalBsp);
+	for (i = 0; i < pContext->m_pWorld->m_WorldModels.GetSize(); i++)
+		ClearPolyLightmapPages(pContext->m_pWorld->m_WorldModels[i]->m_pOriginalBsp);
 }
 
 // ---- queued world polygon drawing (the polygons of lightmapped surfaces are queued per texture by FUN_100356b8) --------------

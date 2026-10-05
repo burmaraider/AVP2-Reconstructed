@@ -216,8 +216,8 @@ void d3d_BlitFromScreen(BlitRequest *pRequest)
 	if (DAT_1005de40)
 	{
 		AddDebugMessage(20, "Warning: drawing a nonoptimized surface while in 3D mode.");
-		if (DAT_1005de30)
-			DAT_1005de30->EndScene();
+		if (g_pD3DDevice)
+			g_pD3DDevice->EndScene();
 	}
 
 	RECT srcRect;
@@ -231,8 +231,8 @@ void d3d_BlitFromScreen(BlitRequest *pRequest)
 
 	if (DAT_1005de40)
 	{
-		if (DAT_1005de30)
-			DAT_1005de30->BeginScene();
+		if (g_pD3DDevice)
+			g_pD3DDevice->BeginScene();
 	}
 }
 
@@ -246,8 +246,8 @@ void d3d_ReallyBlitToScreen(BlitRequest *pRequest)
 	if (DAT_1005de40)
 	{
 		AddDebugMessage(20, "Warning: drawing a nonoptimized surface while in 3D mode.");
-		if (DAT_1005de30)
-			DAT_1005de30->EndScene();
+		if (g_pD3DDevice)
+			g_pD3DDevice->EndScene();
 	}
 
 	RECT srcRect;
@@ -276,8 +276,8 @@ void d3d_ReallyBlitToScreen(BlitRequest *pRequest)
 
 	if (DAT_1005de40)
 	{
-		if (DAT_1005de30)
-			DAT_1005de30->BeginScene();
+		if (g_pD3DDevice)
+			g_pD3DDevice->BeginScene();
 	}
 
 	InvalidateRect((LTRect *)&destRect);
@@ -459,7 +459,7 @@ void d3d_SwapBuffers(uint32 flags)
 		}
 		else
 		{
-			if (g_CV_LockOnFlip.m_Unk00 && !g_bScreenLocked)
+			if (g_CV_LockOnFlip.m_IntVal && !g_bScreenLocked)
 			{
 				lockRect.left = 0;
 				lockRect.top = 0;

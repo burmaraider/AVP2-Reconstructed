@@ -82,7 +82,7 @@ int UnkType_LMLock::FUN_10034af0(WorldPoly *pPoly, int bClear, uint32 width, uin
 
 	if (bClear)
 	{
-		if (!WORLDPOLY_UNK48(pPoly) || !DAT_10048780)
+		if (!WORLDPOLY_LMPAGE(pPoly) || !DAT_10048780)
 		{
 			DDBLTFX bltfx;
 			memset(&bltfx, 0, sizeof(bltfx));
@@ -96,7 +96,7 @@ int UnkType_LMLock::FUN_10034af0(WorldPoly *pPoly, int bClear, uint32 width, uin
 			rc.top = WORLDPOLY_UNK4F(pPoly);
 			rc.right = width + rc.left;
 			rc.bottom = height + rc.top;
-			hr = pSurface->BltFast(0, 0, WORLDPOLY_UNK48(pPoly)->m_Unk1c, &rc, DDBLTFAST_WAIT);
+			hr = pSurface->BltFast(0, 0, WORLDPOLY_LMPAGE(pPoly)->m_Unk1c, &rc, DDBLTFAST_WAIT);
 		}
 
 		if (hr != DD_OK)
@@ -136,17 +136,17 @@ int UnkType_LMLock::FUN_10034c7c(int bUpload)
 
 		HRESULT result;
 		if (!DAT_1005de3c)
-			result = DAT_1005de30->Load(pTexture->m_Data.m_pSurface, NULL, m_Unk50->m_Data.m_pSurface, &rc, 0);
+			result = g_pD3DDevice->Load(pTexture->m_Data.m_pSurface, NULL, m_Unk50->m_Data.m_pSurface, &rc, 0);
 		else
-			result = DAT_1005de30->Load(pTexture->m_Data.m_pSurface, NULL, m_Unk50->m_Data.m_pSurface, NULL, 0);
+			result = g_pD3DDevice->Load(pTexture->m_Data.m_pSurface, NULL, m_Unk50->m_Data.m_pSurface, NULL, 0);
 		if (result != D3D_OK)
 			return 0;
 
 		dl_Remove(&pTexture->m_Link);
 		dl_Insert(m_Unk4c->m_pPrev, &pTexture->m_Link);
 
-		DAT_100617d8[DAT_1005c838] = (UnkType_TexData *)pTexture;
-		DAT_1005de30->SetTexture(DAT_1005c838, pTexture->m_Data.m_pSurface);
+		g_pBoundTextures[DAT_1005c838] = (RTextureBase *)pTexture;
+		g_pD3DDevice->SetTexture(DAT_1005c838, pTexture->m_Data.m_pSurface);
 
 		float fInvSize = 1.0f / (float)DAT_1004bf3c[m_Unk08];
 		DAT_10061810[DAT_1005c838].m_Unk00 = fInvSize;

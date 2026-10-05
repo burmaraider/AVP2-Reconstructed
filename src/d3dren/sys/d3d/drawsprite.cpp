@@ -85,39 +85,39 @@ void d3d_DrawNoZSprites()
 		BaseObjectSet *pSet = &d3d_GetVisibleSet()->m_NoZSprites;
 		if (pSet->m_nObjects > 0)
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZENABLE, 0);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 0);
 			pSet->Draw(&g_ViewParams, d3d_DrawSprite);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZENABLE, DAT_1005c9a0);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, DAT_1005c9a0);
 		}
 	}
 }
 
 
 // guess: Jupiter polyclip.h's clipper dispatch as an inline function of the original (the exe expands it in several of this unit's
-// functions; unit unk/100098d0 has the out-of-line copy FUN_1000afb1): the polygon *ppVerts / *pnVerts is clipped against the planes
+// functions; unit unk/100098d0 has the out-of-line copy ClipPoly): the polygon *ppVerts / *pnVerts is clipped against the planes
 // of nFlags; with the UseD3DClip console variable set only the near plane is.
-static inline int FUN_1000afb1_Inline(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
+static inline int ClipPoly(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 {
 	TLVertex *pOut;
 	TLVertex *pVerts;
 	int nVerts;
 	char c0, c1, c2, c3, c4, c5;
 
-	if (g_CV_UseD3DClip.m_Unk00)
+	if (g_CV_UseD3DClip.m_IntVal)
 	{
 		nFlags &= 1;
 		if (!nFlags)
 			return 1;
 	}
-	pOut = DAT_1005627c;
+	pOut = g_pClipScratchVerts;
 	pVerts = *ppVerts;
 	nVerts = *pnVerts;
-	if (((nFlags & 1) == 0 || FUN_1000b0cd(&c0, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 4) == 0 || FUN_1000b20c(&c1, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 8) == 0 || FUN_100063e0(&c2, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 0x10) == 0 || FUN_10006670(&c3, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 0x20) == 0 || FUN_10006900(&c4, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 2) == 0 || FUN_10006ba0(&c5, &pVerts, &nVerts, &pOut)))
+	if (((nFlags & 1) == 0 || ClipPolyNear(&c0, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 4) == 0 || ClipPolyLeft(&c1, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 8) == 0 || ClipPolyTop(&c2, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 0x10) == 0 || ClipPolyRight(&c3, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 0x20) == 0 || ClipPolyBottom(&c4, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 2) == 0 || ClipPolyFar(&c5, &pVerts, &nVerts, &pOut)))
 	{
 		*ppVerts = pVerts;
 		*pnVerts = nVerts;
@@ -129,7 +129,7 @@ static inline int FUN_1000afb1_Inline(uint32 nFlags, TLVertex **ppVerts, int *pn
 
 // guess: the two sprite drawers: the camera facing one (unit-internal, 0x1002d860) and the rotatable one (0x1002e310); both take the
 // view parameters, the sprite, its position (&m_Pos), its x and y scale and the frame's texture
-void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos, float fScaleX, float fScaleY, SharedTexture *pTexture);
+void d3d_DrawSprite(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos, float fScaleX, float fScaleY, SharedTexture *pTexture);
 void d3d_DrawRotatableSprite(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos, float fScaleX, float fScaleY, SharedTexture *pTexture);
 
 // NAME: d3d_DrawSprite: Jupiter drawsprite.cpp d3d_DrawSprite(Params, pObj) (names_proposal.csv, high): the BaseObjectSet / ObjectDrawList
@@ -146,10 +146,21 @@ void d3d_DrawSprite(ViewParams *pParams, LTObject *pObject)
 
 	if (pAnim && pFrame && pFrame->m_pTex)
 	{
-		DAT_10056274 = 0x3f;
+		g_ClipFlags = 0x3f;
 
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &dwFogColor);
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwFog);
+		/*Proposed change
+		g_ClipFlags =
+		(1 << CPLANE_NEAR_INDEX) |
+		(1 << CPLANE_FAR_INDEX) |
+		(1 << CPLANE_LEFT_INDEX) |
+		(1 << CPLANE_TOP_INDEX) |
+		(1 << CPLANE_RIGHT_INDEX) |
+		(1 << CPLANE_BOTTOM_INDEX);*/
+
+
+		//This is inlined d3d_GetBlendStates
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &dwFogColor);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwFog);
 		if ((pObject->m_Flags & FLAG_FOGDISABLE) && pObject->m_ObjectType != OT_MODEL)
 			dwFog = 0;
 
@@ -170,6 +181,7 @@ void d3d_DrawSprite(ViewParams *pParams, LTObject *pObject)
 			srcBlend = D3DBLEND_SRCALPHA;
 			destBlend = D3DBLEND_INVSRCALPHA;
 		}
+		//End inline d3d_GetBlendStates
 
 		StateSet ssSrcBlend(D3DRENDERSTATE_SRCBLEND, srcBlend);
 		StateSet ssDestBlend(D3DRENDERSTATE_DESTBLEND, destBlend);
@@ -179,7 +191,7 @@ void d3d_DrawSprite(ViewParams *pParams, LTObject *pObject)
 		if (pObject->m_Flags & FLAG_ROTATEABLESPRITE)
 			d3d_DrawRotatableSprite(pParams, pInstance, &pInstance->m_Pos, pInstance->m_Scale.x, pInstance->m_Scale.y, pFrame->m_pTex);
 		else
-			FUN_1002d860(pParams, pInstance, &pInstance->m_Pos, pInstance->m_Scale.x, pInstance->m_Scale.y, pFrame->m_pTex);
+			d3d_DrawSprite(pParams, pInstance, &pInstance->m_Pos, pInstance->m_Scale.x, pInstance->m_Scale.y, pFrame->m_pTex);
 	}
 }
 
@@ -353,7 +365,7 @@ int d3d_ClipSprite(SpriteInstance *pInstance, HPOLY hPoly, TLVertex **ppPoints, 
 
 
 // guess: transforms the 0x20-byte vertices *ppVerts (*pnVerts of them) to camera space, clips them against the planes of the current
-// clip mask (DAT_10056274; 0 when nothing is left) and projects them to the screen; the z (and the reciprocal w) is that of the vertex
+// clip mask (g_ClipFlags; 0 when nothing is left) and projects them to the screen; the z (and the reciprocal w) is that of the vertex
 // moved fBias along z, but not in front of the near plane (the sprite bias: Jupiter SPRITE_POSITION_ZBIAS).  The fourth argument is not
 // used (the callers pass 0, as for FUN_1000af16, its sibling without the bias).
 // NAME: guess_d3d_ProjectBiasedSpriteVerts (names_proposal.csv, low)
@@ -370,13 +382,13 @@ int FUN_1002f010(TLVertex **ppVerts, int *pnVerts, ViewParams *pParams, int a4, 
 	pVert = *ppVerts;
 	for (i = *pnVerts; i != 0; i--)
 	{
-		MatVMul_InPlace(&pParams->m_Unk15c, &pVert->m_Vec);
+		MatVMul_InPlace(&pParams->m_mClipTransform, &pVert->m_Vec);
 		pVert++;
 	}
 
-	if (DAT_10056274 != 0)
+	if (g_ClipFlags != 0)
 	{
-		if (!FUN_1000afb1_Inline(DAT_10056274, ppVerts, pnVerts))
+		if (!ClipPoly(g_ClipFlags, ppVerts, pnVerts))
 			return 0;
 	}
 
@@ -388,8 +400,8 @@ int FUN_1002f010(TLVertex **ppVerts, int *pnVerts, ViewParams *pParams, int a4, 
 		float fBiasZ = fBias;
 		float fW, fWBiased;
 
-		if (fBias + pVert->m_Vec.z < g_CV_NearZ.m_Unk04)
-			fBiasZ = g_CV_NearZ.m_Unk04 - pVert->m_Vec.z;
+		if (fBias + pVert->m_Vec.z < g_CV_NearZ.m_FloatVal)
+			fBiasZ = g_CV_NearZ.m_FloatVal - pVert->m_Vec.z;
 
 		fW = MatVMul_H(&vProj, pMat, &pVert->m_Vec);
 		vBiased = pVert->m_Vec;
@@ -435,7 +447,7 @@ static inline int SpriteSetTexture(SharedTexture *pTexture, uint32 nStage)
 			break;
 	}
 
-	if (pRTexture && pRTexture == (RTexture *)DAT_100617d8[nStage])
+	if (pRTexture && pRTexture == (RTexture *)g_pBoundTextures[nStage])
 	{
 	}
 	else
@@ -471,7 +483,7 @@ static inline int SpriteSetTexture(SharedTexture *pTexture, uint32 nStage)
 // guess: the colour of a sprite: its colour bytes times the ambient world colour, plus (unless FLAG_NOLIGHT) the light grid sample at
 // its position and the dynamic lights (d3d_CalcLightAdd), clamped to 0..255; Jupiter drawsprite.cpp d3d_GetSpriteColor.  An inline
 // function of the original (expanded in both sprite draw functions).
-static inline uint32 SpriteGetColor(SpriteInstance *pInstance)
+static inline uint32 d3d_GetSpriteColor(SpriteInstance *pInstance)
 {
 	TLRGB color;
 
@@ -533,9 +545,9 @@ static inline uint32 SpriteGetColor(SpriteInstance *pInstance)
 // first 0x17f bytes line up, after that the block placement of the d3d_SetTexture expansion (the exe lays the `create + link` block
 // before the `found` compare) and register/frame assignment shift everything (839 aligned mismatches).  Not iterated further.
 // STUB: D3DREN 0x1002d860
-void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos, float fScaleX, float fScaleY, SharedTexture *pTexture)
+void d3d_DrawSprite(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos, float fScaleX, float fScaleY, SharedTexture *pTexture)
 {
-	LTVector vCam;
+	LTVector vViewPos;
 	float fNearZ;
 	uint32 nSpecular;
 	TLVertex aVerts[4];
@@ -550,17 +562,17 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 
 	if (pInstance->m_Flags & FLAG_REALLYCLOSE)
 	{
-		MatVMul(&vCam, &pParams->m_Unk2dc, pPos);
-		fNearZ = g_CV_ReallyCloseNearZ.m_Unk04;
+		MatVMul(&vViewPos, &pPa	rams->m_Unk2dc, pPos);
+		fNearZ = g_CV_ReallyCloseNearZ.m_FloatVal;
 	}
 	else
 	{
-		MatVMul(&vCam, &pParams->m_Unk15c, pPos);
-		fNearZ = g_CV_NearZ.m_Unk04;
+		MatVMul(&vViewPos, &pParams->m_mClipTransform, pPos);
+		fNearZ = g_CV_NearZ.m_FloatVal;
 	}
 
-	DAT_1005872c(&pInstance->m_Pos, &nSpecular);
-	if (vCam.z <= fNearZ)
+	g_pfnCalcFogAlpha(&pInstance->m_Pos, &nSpecular);
+	if (vViewPos.z <= fNearZ)
 		return;
 
 	{
@@ -571,7 +583,7 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 	if (!SpriteSetTexture(pTexture, g_NormalTextureStage))
 		return;
 
-	pBound = (RTexture *)DAT_100617d8[g_NormalTextureStage];
+	pBound = (RTexture *)g_pBoundTextures[g_NormalTextureStage];
 	fWidth = (float)pBound->m_Data.GetBaseWidth();
 	fHeight = (float)pBound->m_Data.GetBaseHeight();
 	uMin = DAT_10061810[0].m_Unk00 + DAT_10061810[0].m_Unk00;
@@ -579,11 +591,11 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 	vMin = DAT_10061810[0].m_Unk04 + DAT_10061810[0].m_Unk04;
 	vMax = (fHeight - 2.0f) * DAT_10061810[0].m_Unk04;
 
-	fHalfX = fWidth * pParams->m_Unk94 * fScaleX;
-	fHalfY = fHeight * pParams->m_Unk98 * fScaleY;
+	fHalfX = fWidth * pParams->m_fFovXScale * fScaleX;
+	fHalfY = fHeight * pParams->m_fFovYScale * fScaleY;
 	if (pInstance->m_Flags & FLAG_GLOWSPRITE)
 	{
-		float fFactor = (vCam.z - SPRITE_MINFACTORDIST) / (SPRITE_MAXFACTORDIST - SPRITE_MINFACTORDIST);
+		float fFactor = (vViewPos.z - SPRITE_MINFACTORDIST) / (SPRITE_MAXFACTORDIST - SPRITE_MINFACTORDIST);
 		if (fFactor >= 0.0f)
 		{
 			if (fFactor > 1.0f)
@@ -596,32 +608,32 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 		fHalfY *= fFactor;
 	}
 
-	nColor = SpriteGetColor(pInstance);
+	nColor = d3d_GetSpriteColor(pInstance);
 
-	aVerts[0].m_Vec.x = vCam.x - fHalfX;
-	aVerts[0].m_Vec.y = vCam.y + fHalfY;
-	aVerts[0].m_Vec.z = vCam.z;
+	aVerts[0].m_Vec.x = vViewPos.x - fHalfX;
+	aVerts[0].m_Vec.y = vViewPos.y + fHalfY;
+	aVerts[0].m_Vec.z = vViewPos.z;
 	aVerts[0].color = nColor;
 	aVerts[0].specular = nSpecular;
 	aVerts[0].tu = uMin;
 	aVerts[0].tv = vMin;
-	aVerts[1].m_Vec.x = vCam.x + fHalfX;
-	aVerts[1].m_Vec.y = vCam.y + fHalfY;
-	aVerts[1].m_Vec.z = vCam.z;
+	aVerts[1].m_Vec.x = vViewPos.x + fHalfX;
+	aVerts[1].m_Vec.y = vViewPos.y + fHalfY;
+	aVerts[1].m_Vec.z = vViewPos.z;
 	aVerts[1].color = nColor;
 	aVerts[1].specular = nSpecular;
 	aVerts[1].tu = uMax;
 	aVerts[1].tv = vMin;
-	aVerts[2].m_Vec.x = vCam.x + fHalfX;
-	aVerts[2].m_Vec.y = vCam.y - fHalfY;
-	aVerts[2].m_Vec.z = vCam.z;
+	aVerts[2].m_Vec.x = vViewPos.x + fHalfX;
+	aVerts[2].m_Vec.y = vViewPos.y - fHalfY;
+	aVerts[2].m_Vec.z = vViewPos.z;
 	aVerts[2].color = nColor;
 	aVerts[2].specular = nSpecular;
 	aVerts[2].tu = uMax;
 	aVerts[2].tv = vMax;
-	aVerts[3].m_Vec.x = vCam.x - fHalfX;
-	aVerts[3].m_Vec.y = vCam.y - fHalfY;
-	aVerts[3].m_Vec.z = vCam.z;
+	aVerts[3].m_Vec.x = vViewPos.x - fHalfX;
+	aVerts[3].m_Vec.y = vViewPos.y - fHalfY;
+	aVerts[3].m_Vec.z = vViewPos.z;
 	aVerts[3].color = nColor;
 	aVerts[3].specular = nSpecular;
 	aVerts[3].tu = uMin;
@@ -641,23 +653,23 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 			aVerts[i].tu = fDV * mRot[1][0] + fDU * mRot[0][0] + fCenterU;
 			aVerts[i].tv = fDV * mRot[1][1] + fDU * mRot[0][1] + fCenterV;
 		}
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 	}
 
 	fSavedNearPlane = g_ViewParams.m_NearZ;
 	pVerts = aVerts;
 	nVerts = 4;
 	if (pInstance->m_Flags & FLAG_REALLYCLOSE)
-		g_ViewParams.m_NearZ = g_CV_ReallyCloseNearZ.m_Unk04;
+		g_ViewParams.m_NearZ = g_CV_ReallyCloseNearZ.m_FloatVal;
 
-	if (FUN_1000afb1_Inline(DAT_10056274, &pVerts, &nVerts))
+	if (ClipPoly(g_ClipFlags, &pVerts, &nVerts))
 	{
 		if (!(pInstance->m_Flags & FLAG_SPRITEBIAS))
 		{
 			if (!(pInstance->m_Flags & FLAG_REALLYCLOSE))
 			{
 				for (i = nVerts; i != 0; i--)
-					FUN_10008895(&pVerts[nVerts - i].m_Vec.x, &g_ViewParams);
+					ProjectVertexToScreen(&pVerts[nVerts - i].m_Vec.x, &g_ViewParams);
 			}
 			else
 			{
@@ -669,7 +681,7 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 					LTVector vBiased = pVerts[i].m_Vec;
 					float fWBiased;
 
-					vBiased.z += g_CV_NearZ.m_Unk04;
+					vBiased.z += g_CV_NearZ.m_FloatVal;
 					fWBiased = MatVMul_H(&vProjBiased, pMat, &vBiased);
 					pVerts[i].m_Vec.x = vProj.x;
 					pVerts[i].m_Vec.y = vProj.y;
@@ -681,8 +693,8 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 		else
 		{
 			float fBias = SPRITE_POSITION_ZBIAS;
-			if (SPRITE_POSITION_ZBIAS + vCam.z < g_CV_NearZ.m_Unk04)
-				fBias = g_CV_NearZ.m_Unk04 - vCam.z;
+			if (SPRITE_POSITION_ZBIAS + vViewPos.z < g_CV_NearZ.m_FloatVal)
+				fBias = g_CV_NearZ.m_FloatVal - vViewPos.z;
 
 			for (i = 0; i < nVerts; i++)
 			{
@@ -704,11 +716,11 @@ void FUN_1002d860(ViewParams *pParams, SpriteInstance *pInstance, LTVector *pPos
 		DAT_10063c90.FUN_10021da6();
 		if (pTexture->m_pStateChange)
 			DAT_10063c90.FUN_10021db7(pTexture->m_pStateChange, g_NormalTextureStage);
-		DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
+		g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 	}
 
 	if (pInstance->m_Flags2 & FLAG2_SPRITE_TROTATE)
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 	g_ViewParams.m_NearZ = fSavedNearPlane;
 }
 
@@ -758,11 +770,11 @@ void d3d_DrawRotatableSprite(ViewParams *pParams, SpriteInstance *pInstance, LTV
 	if (pTexture->m_pStateChange)
 		DAT_10063c90.FUN_10021db7(pTexture->m_pStateChange, g_NormalTextureStage);
 
-	pBound = (RTexture *)DAT_100617d8[g_NormalTextureStage];
+	pBound = (RTexture *)g_pBoundTextures[g_NormalTextureStage];
 	fWidth = (float)(pBound->m_Data.GetBaseWidth() >> pTexture->m_Unknown3C);
 	fHeight = (float)(pBound->m_Data.GetBaseHeight() >> pTexture->m_Unknown3C);
 
-	DAT_1005872c(&pInstance->m_Pos, &nSpecular);
+	g_pfnCalcFogAlpha(&pInstance->m_Pos, &nSpecular);
 
 	uMin = DAT_10061810[0].m_Unk00 + DAT_10061810[0].m_Unk00;
 	uMax = (fWidth - 2.0f) * DAT_10061810[0].m_Unk00;
@@ -779,7 +791,7 @@ void d3d_DrawRotatableSprite(ViewParams *pParams, SpriteInstance *pInstance, LTV
 	if (0.0f <= vFacing.x * (pParams->m_Pos.x - pPos->x) + vFacing.y * (pParams->m_Pos.y - pPos->y) + vFacing.z * (pParams->m_Pos.z - pPos->z))
 		pOrder = s_CornerOrderFront;
 
-	nColor = SpriteGetColor(pInstance);
+	nColor = d3d_GetSpriteColor(pInstance);
 
 	iVert = pOrder[0];
 	aVerts[iVert].m_Vec.x = fWidth;

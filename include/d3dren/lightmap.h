@@ -41,7 +41,7 @@ int FUN_10033210(MainWorld *pWorld, WorldPoly *pPoly, int bPageIn);
 // ---- renderer data inside the engine's WorldPoly / SPolyVertex (padding there) --------------------------------------------
 // WorldPoly 0x48: the lightmap page the poly's lightmap lives in (UnkType_LMPage*, 0 = none); 0x4c/0x4d are the engine's
 // m_LMWidth/m_LMHeight (texels), 0x4e/0x4f the position of the lightmap inside the page (texels).
-#define WORLDPOLY_UNK48(p)		(*(UnkType_LMPage **)((uint8 *)(p) + 0x48))
+#define WORLDPOLY_LMPAGE(p)		(*(LightmapPage **)((uint8 *)(p) + 0x48))
 #define WORLDPOLY_UNK4E(p)		(*((uint8 *)(p) + 0x4e))
 #define WORLDPOLY_UNK4F(p)		(*((uint8 *)(p) + 0x4f))
 // SPolyVertex 0x0c/0x10: the vertex's lightmap texture coordinates (page relative, written by FUN_1003429b).
@@ -53,11 +53,11 @@ int FUN_10033210(MainWorld *pWorld, WorldPoly *pPoly, int bPageIn);
 // RTexture (d3dtexture.h, vtable 0x10046390) and the lightmap page (vtable 0x100464c8) derive from it.  The slot roles are
 // from the RTexture implementations (0x1001e6f0.., names_proposal.csv: slot 2 = IsFullbrite and 3/4 = GetBaseWidth/Height are
 // Jupiter RTexture names, medium); slot 1 returns 1 for an RTexture and 0 for a page (role unknown).
-class UnkType_RTextureBase
+class RTextureBase
 {
 public:
-	virtual ~UnkType_RTextureBase() {}								// 0x00
-	virtual int		FUN_vslot1() = 0;								// 0x04
+	virtual ~RTextureBase() {}										// 0x00
+	virtual int		IsRTexture() = 0;								// 0x04
 	virtual int		IsFullbrite() = 0;								// 0x08
 	virtual int		GetBaseWidth() = 0;								// 0x0c
 	virtual int		GetBaseHeight() = 0;							// 0x10
@@ -65,23 +65,23 @@ public:
 
 // One 64x64 lightmap page (0x28 bytes, vtable 0x100464c8; built by FUN_10034142, which allocates the DirectDraw texture
 // surface and the 0x80 byte occupancy bitmap).  The occupancy bitmap has one bit per 4x4 texel cell, 0x40 cells per row.
-struct UnkType_LMPage : public UnkType_RTextureBase
+struct LightmapPage : public RTextureBase
 {
-	UnkType_LMPage();												// 0x1003424d
-	virtual int		FUN_vslot1();									// 0x10034277
+	LightmapPage();													// 0x1003424d
+	virtual int		IsRTexture();									// 0x10034277
 	virtual int		IsFullbrite();									// 0x10034277 (same code)
 	virtual int		GetBaseWidth();									// 0x1003427a: 64
 	virtual int		GetBaseHeight();								// 0x1003427a (same code)
 
 	uint32					m_Unk04;			// 0x04 next page of the list of pages that have polys waiting (world poly queue, unit unk/100098d0)
 	uint32					m_Unk08;			// 0x08 the polys waiting for this page (pool nodes)
-	uint8					*m_Unk0c;			// 0x0c occupancy bitmap (dalloc_z(0x80)), freed by FUN_1003451f
-	uint32					m_Unk10;			// 0x10 texels of the page assigned so far (FUN_1003429b adds w*h)
-	uint32					m_Unk14;			// 0x14 size of the surface in bytes (FUN_10034142: bytes per pixel << 12)
+	uint8					*m_pOccupancyMap;	// 0x0c occupancy bitmap (dalloc_z(0x80)), freed by FreeLightmapPageBitmaps
+	uint32					m_nUsedTexels;		// 0x10 texels of the page assigned so far (FUN_1003429b adds w*h)
+	uint32					m_nMemoryUse;		// 0x14 size of the surface in bytes (FUN_10034142: bytes per pixel << 12)
 	uint32					m_Unk18;			// 0x18
-	IDirectDrawSurface7		*m_Unk1c;			// 0x1c the page's texture surface
+	IDirectDrawSurface7		*m_pSurface;		// 0x1c the page's texture surface
 	uint32					m_Unk20;			// 0x20 (set to 1 by the constructor; non-zero once the first draw has set the page up)
-	UnkType_LMPage			*m_Unk24;			// 0x24 next page of the RenderContext list
+	LightmapPage			*m_pNext;			// 0x24 next page of the RenderContext list
 };
 
 // ---- the lightmap staging textures and the lock helper ---------------------------------------------------------------------------
@@ -185,6 +185,6 @@ void SetupLMPlaneVectors(uint32 iPlane, const LTVector &N, LTVector &P, LTVector
 // and RebindLightmaps (0x1001b790).
 int FUN_10034597(RenderContext *pContext);					// 0x10034597
 // guess: frees the pages of the context and forgets them in the world's polygons (DeleteContext, RebindLightmaps).
-void FUN_100347ac(RenderContext *pContext);					// 0x100347ac
+void FreeLightmapPages(RenderContext *pContext);					// 0x100347ac
 
 #endif

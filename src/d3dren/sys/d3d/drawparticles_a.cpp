@@ -89,7 +89,7 @@ void d3d_TestAndDrawPS(ViewParams *pParams, LTObject *pObj)
 	pSystem = (LTParticleSystem *)pObj;
 	radius = pSystem->m_SystemRadius * LTMAX(pSystem->m_Scale.x, LTMAX(pSystem->m_Scale.y, pSystem->m_Scale.z));
 
-	if (FUN_1000b63b(&pSystem->m_SystemCenter, radius, (pSystem->m_Flags & FLAG_REALLYCLOSE) ? g_ViewParams.m_Unk430 : g_ViewParams.m_ClipPlanes, &clipFlags))
+	if (FUN_1000b63b(&pSystem->m_SystemCenter, radius, (pSystem->m_Flags & FLAG_REALLYCLOSE) ? g_ViewParams.m_ReallyCloseClipPlanes : g_ViewParams.m_ClipPlanes, &clipFlags))
 	{
 		pSystem->m_Flags |= FLAG_INTERNAL1;
 

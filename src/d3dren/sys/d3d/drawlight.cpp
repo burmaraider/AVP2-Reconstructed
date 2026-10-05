@@ -21,9 +21,9 @@
 #include "d3dren/scenedesc.h"
 #include "d3dren/visibleset.h"
 #include "d3dren/drawobjects.h"
-#include "d3dren/d3dstate.h"		// DAT_1005de30 (the device), DAT_100617d8 (the textures bound per stage)
+#include "d3dren/d3dstate.h"		// g_pD3DDevice (the device), g_pBoundTextures (the textures bound per stage)
 #include "d3dren/tlvertex.h"
-#include "d3dren/pool.h"			// FUN_10008895 (projects a TL vertex)
+#include "d3dren/pool.h"			// ProjectVertexToScreen (projects a TL vertex)
 #include "d3dren/fixedpoint.h"		// RoundFloatToInt
 
 // NAME: d3d_ProcessLight: Jupiter drawlight.cpp d3d_ProcessLight (g_ObjectHandlers[OT_LIGHT].m_ProcessObjectFn; Ghidra name).

@@ -63,7 +63,7 @@ void d3d_ProcessWorldModel(LTObject *pObject)
 // FUNCTION: D3DREN 0x1002fa50
 void FUN_1002fa50()
 {
-	if (g_CV_DrawWorldModels.m_Unk00)
+	if (g_CV_DrawWorldModels.m_IntVal)
 	{
 		BaseObjectSet *pSet = &d3d_GetVisibleSet()->m_SolidWorldModels;
 		if (pSet->m_nObjects != 0)
@@ -75,7 +75,7 @@ void FUN_1002fa50()
 // FUNCTION: D3DREN 0x1002fed0
 void FUN_1002fed0()
 {
-	if (g_CV_DrawWorldModels.m_Unk00)
+	if (g_CV_DrawWorldModels.m_IntVal)
 	{
 		BaseObjectSet *pSet = &d3d_GetVisibleSet()->m_Unk224;
 		if (pSet->m_nObjects != 0)
@@ -105,7 +105,7 @@ void FUN_1002ff00()
 {
 	LTObject *aAdditive[0x400];
 	UnkType_LocalObjectSet cAdditive(aAdditive, 0x400);
-	if (g_CV_DrawWorldModels.m_Unk00)
+	if (g_CV_DrawWorldModels.m_IntVal)
 	{
 		VisibleSet *pVisibleSet = d3d_GetVisibleSet();
 		BaseObjectSet *pSet = &pVisibleSet->m_TranslucentWorldModels;
@@ -115,10 +115,10 @@ void FUN_1002ff00()
 			LTObject *pObject = pSet->m_pObjects[i];
 			if (pObject->m_Flags & FLAG_VISIBLE)
 			{
-				if (g_ViewParams.m_Unk4d4 && (pObject->m_Flags2 & FLAG2_PORTALINVISIBLE))
+				if (g_ViewParams.m_bPortalView && (pObject->m_Flags2 & FLAG2_PORTALINVISIBLE))
 					continue;
 			}
-			else if (g_ViewParams.m_Unk4d4 && !(pObject->m_Flags & 0x400))
+			else if (g_ViewParams.m_bPortalView && !(pObject->m_Flags & 0x400))
 				continue;
 
 			if (FUN_10019880(pObject) & 0x80000)
@@ -184,7 +184,7 @@ void FUN_1002f440(WorldModelInstance *pInstance, WorldPoly **ppPolies, uint32 nP
 	uint16 nFrameCode;
 	uint32 iPoly;
 
-	DAT_10056274 = nClipFlags;
+	g_ClipFlags = nClipFlags;
 	nFrameCode = g_CurFrameCode + 1;
 
 	if (DAT_1005ce18)
@@ -489,18 +489,18 @@ void d3d_DrawSolidWorldModel(ViewParams *pParams, LTObject *pObject)
 
 	WMSetColor(pInstance);
 
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwOldFog);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwOldFog);
 	if (dwOldFog)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, !(pInstance->m_Flags & FLAG_FOGDISABLE));
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, !(pInstance->m_Flags & FLAG_FOGDISABLE));
 
-	mSaved15c = pParams->m_Unk15c;
+	mSaved15c = pParams->m_mClipTransform;
 	mSavedFull = pParams->m_FullTransform;
-	MatMul(&pParams->m_Unk15c, &mSaved15c, &pInstance->m_Transform);
-	MatMul(&pParams->m_FullTransform, &pParams->m_DeviceTimesProjection, &pParams->m_Unk15c);
+	MatMul(&pParams->m_mClipTransform, &mSaved15c, &pInstance->m_Transform);
+	MatMul(&pParams->m_FullTransform, &pParams->m_DeviceTimesProjection, &pParams->m_mClipTransform);
 
-	vOldFogPos = pParams->m_Unk4e4;
+	vOldFogPos = pParams->m_FogViewPos;
 	MatVMul_H(&vFogPos, &pInstance->m_BackTransform, &vOldFogPos);
-	pParams->FUN_1000f1a0(vFogPos);
+	pParams->SetupFogViewPosition(vFogPos);
 
 	FUN_100144b0(0);
 
@@ -518,10 +518,10 @@ void d3d_DrawSolidWorldModel(ViewParams *pParams, LTObject *pObject)
 
 	FUN_100145f0(0);
 
-	pParams->m_Unk15c = mSaved15c;
+	pParams->m_mClipTransform = mSaved15c;
 	pParams->m_FullTransform = mSavedFull;
-	pParams->FUN_1000f1a0(vOldFogPos);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, dwOldFog);
+	pParams->SetupFogViewPosition(vOldFogPos);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, dwOldFog);
 }
 
 // ---- d3d_DrawTranslucentWorldModel ------------------------------------------------------------------------------------------------------
@@ -551,16 +551,16 @@ void FUN_10030070(ViewParams *pParams, LTObject *pObject)
 
 	WMSetColor(pInstance);
 
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwOldFog);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, &dwOldFog);
 	if (dwOldFog)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, !(pInstance->m_Flags & FLAG_FOGDISABLE));
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, !(pInstance->m_Flags & FLAG_FOGDISABLE));
 
-	mSaved15c = pParams->m_Unk15c;
+	mSaved15c = pParams->m_mClipTransform;
 	mSavedFull = pParams->m_FullTransform;
-	vOldFogPos = pParams->m_Unk4e4;
-	pParams->FUN_1000f1a0(LTVector(0.0f, 0.0f, 0.0f));
-	MatMul(&pParams->m_Unk15c, &mSaved15c, &pInstance->m_Transform);
-	MatMul(&pParams->m_FullTransform, &pParams->m_DeviceTimesProjection, &pParams->m_Unk15c);
+	vOldFogPos = pParams->m_FogViewPos;
+	pParams->SetupFogViewPosition(LTVector(0.0f, 0.0f, 0.0f));
+	MatMul(&pParams->m_mClipTransform, &mSaved15c, &pInstance->m_Transform);
+	MatMul(&pParams->m_FullTransform, &pParams->m_DeviceTimesProjection, &pParams->m_mClipTransform);
 
 	pNode = pInstance->m_pOriginalBsp->GetRootNode();
 	iStack = 0;
@@ -587,7 +587,7 @@ void FUN_10030070(ViewParams *pParams, LTObject *pObject)
 			{
 				WorldPoly *pPoly;
 
-				DAT_10056274 = 0x3f;
+				g_ClipFlags = 0x3f;
 				pPoly = pNode->m_pPoly;
 				if (!(POLY_SURFACE(pPoly)->m_Flags & SURF_INVISIBLE))
 				{
@@ -624,10 +624,10 @@ NextNode:
 		}
 	}
 
-	pParams->m_Unk15c = mSaved15c;
+	pParams->m_mClipTransform = mSaved15c;
 	pParams->m_FullTransform = mSavedFull;
-	pParams->FUN_1000f1a0(vOldFogPos);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, dwOldFog);
+	pParams->SetupFogViewPosition(vOldFogPos);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, dwOldFog);
 }
 
 // ---- d3d_DrawTranslucentWorldPoly ----------------------------------------------------------------------------------------------------
@@ -732,7 +732,7 @@ void FUN_10030370(WorldPoly *pPoly)
 
 	if (POLY_SURFACE(pPoly)->m_pTexture)
 	{
-		if (POLY_SURFACE(pPoly)->m_pTexture->m_eTexType != 0 && g_CV_EnvMapWorld.m_Unk00)
+		if (POLY_SURFACE(pPoly)->m_pTexture->m_eTexType != 0 && g_CV_EnvMapWorld.m_IntVal)
 			bEnvMap = 1;
 		else
 			bEnvMap = 0;
@@ -852,17 +852,17 @@ void FUN_10030370(WorldPoly *pPoly)
 		}
 	}
 
-	DAT_10056274 = 0x3f;
+	g_ClipFlags = 0x3f;
 	pVerts = aVerts;
 	pDest = aVerts;
 	for (i = nVerts; i != 0; i--)
 	{
-		FUN_10008719(&pDest->m_Vec.x, &g_ViewParams.m_Unk15c.m[0][0]);
-		DAT_1005872c(&pDest->m_Vec, &pDest->specular);
+		FUN_10008719(&pDest->m_Vec.x, &g_ViewParams.m_mClipTransform.m[0][0]);
+		g_pfnCalcFogAlpha(&pDest->m_Vec, &pDest->specular);
 		pDest++;
 	}
 
-	if (!FUN_10008779(DAT_10056274, &pVerts, &nVerts))
+	if (!FUN_10008779(g_ClipFlags, &pVerts, &nVerts))
 	{
 		FUN_1000a25e();
 		return;
@@ -871,7 +871,7 @@ void FUN_10030370(WorldPoly *pPoly)
 	pDest = pVerts;
 	for (i = nVerts; i != 0; i--)
 	{
-		FUN_10008895(&pDest->m_Vec.x, &g_ViewParams);
+		ProjectVertexToScreen(&pDest->m_Vec.x, &g_ViewParams);
 		pDest++;
 	}
 
@@ -887,7 +887,7 @@ void FUN_10030370(WorldPoly *pPoly)
 			pTexture->m_Unknown30 = DAT_100577b8;
 			if (pFirst && (pRTexture = (UnkType_RTexW6 *)FUN_10009350(pFirst, (uint8)nStage)) != 0)
 			{
-				if (pRTexture != (UnkType_RTexW6 *)DAT_100617d8[nStage])
+				if (pRTexture != (UnkType_RTexW6 *)g_pBoundTextures[nStage])
 					FUN_10007a89((RTexture *)pRTexture);
 			}
 			else
@@ -928,8 +928,8 @@ void FUN_10030370(WorldPoly *pPoly)
 			if (POLY_SURFACE(pPoly)->m_pTexture->m_pStateChange)
 				DAT_10063c90.FUN_10021db7(POLY_SURFACE(pPoly)->m_pTexture->m_pStateChange, g_NormalTextureStage);
 
-			if (DAT_1005de2c && g_CV_DetailTextures.m_Unk00 && DAT_100617d8[0] && POLY_SURFACE(pPoly)->m_pTexture->m_pLinkedTexture &&
-				(!POLY_SURFACE(pPoly)->m_pTexture->m_eTexType || g_CV_EnvMapWorld.m_Unk00) &&
+			if (DAT_1005de2c && g_CV_DetailTextures.m_IntVal && g_pBoundTextures[0] && POLY_SURFACE(pPoly)->m_pTexture->m_pLinkedTexture &&
+				(!POLY_SURFACE(pPoly)->m_pTexture->m_eTexType || g_CV_EnvMapWorld.m_IntVal) &&
 				d3d_SetTexture(POLY_SURFACE(pPoly)->m_pTexture->m_pLinkedTexture, 1, 0))
 			{
 				FUN_1000a23a();
@@ -941,10 +941,10 @@ void FUN_10030370(WorldPoly *pPoly)
 		}
 		else
 		{
-			if (DAT_100617d8[g_NormalTextureStage])
+			if (g_pBoundTextures[g_NormalTextureStage])
 			{
-				DAT_1005de30->SetTexture(g_NormalTextureStage, NULL);
-				DAT_100617d8[g_NormalTextureStage] = 0;
+				g_pD3DDevice->SetTexture(g_NormalTextureStage, NULL);
+				g_pBoundTextures[g_NormalTextureStage] = 0;
 			}
 			FUN_1000a25e();
 		}
@@ -958,7 +958,7 @@ void FUN_10030370(WorldPoly *pPoly)
 		pDest++;
 	}
 
-	DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
+	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
 	DAT_10063c90.FUN_10021da6();
 	FUN_1000a25e();
 }

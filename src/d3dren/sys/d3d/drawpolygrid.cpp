@@ -78,7 +78,7 @@ extern uint8 DAT_1005a204[256];
 
 
 // The 0x28-byte vertex plane clippers / projection of the world polygon code (units unk/10001000 and unk/10007930).
-void FUN_10008895(float *pVert, const void *pViewParams);
+void ProjectVertexToScreen(float *pVert, const void *pViewParams);
 int FUN_100088ec(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
 int FUN_10008a23(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
 int FUN_10006e40(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
@@ -311,8 +311,8 @@ void d3d_DrawPolyGrid(ViewParams *pParams, LTObject *pObj)
 			SharedTexture *pTex = pTracker->m_pCurFrame->m_pTex;
 
 			// The linked texture of the base texture is the environment map.
-			if (DAT_1005de2c && DAT_100617d8[0] && pTex->m_pLinkedTexture && pTex->m_eTexType &&
-				g_CV_EnvMapPolyGrids.m_Unk00 && d3d_SetTexture(pTex->m_pLinkedTexture, 0, 0))
+			if (DAT_1005de2c && g_pBoundTextures[0] && pTex->m_pLinkedTexture && pTex->m_eTexType &&
+				g_CV_EnvMapPolyGrids.m_IntVal && d3d_SetTexture(pTex->m_pLinkedTexture, 0, 0))
 			{
 				bEnvMap = 1;
 			}
@@ -417,7 +417,7 @@ Textured:
 		UnkType_TLVertex40 *pCur = pVerts;
 		for (i = nTotal; i; i--)
 		{
-			MatVMul_InPlace_H(&pParams->m_Unk15c, &pCur->m_Vec);
+			MatVMul_InPlace_H(&pParams->m_mClipTransform, &pCur->m_Vec);
 			pCur++;
 		}
 
@@ -448,7 +448,7 @@ Textured:
 				else if (nResult != 1)
 				{
 					UnkType_PGVertex aVerts[3];
-					UnkType_TLVertex40 *pClipOut = (UnkType_TLVertex40 *)DAT_1005627c;
+					UnkType_TLVertex40 *pClipOut = (UnkType_TLVertex40 *)g_pClipScratchVerts;
 					UnkType_TLVertex40 *pIn = (UnkType_TLVertex40 *)aVerts;
 					int nVerts = 3;
 					uint32 nFlags = nTriFlags;
@@ -459,7 +459,7 @@ Textured:
 					aVerts[2] = *(UnkType_PGVertex *)&pVerts[pIndex[2]];
 
 					// The clip of FUN_10008779 written out in place (when Direct3D clips the sides only the near plane is done here).
-					if (g_CV_UseD3DClip.m_Unk00 == 0 || (nFlags &= 1) != 0)
+					if (g_CV_UseD3DClip.m_IntVal == 0 || (nFlags &= 1) != 0)
 					{
 						if (((nFlags & 1) && !FUN_100088ec(&bUnused0, &pIn, &nVerts, &pClipOut)) ||
 							((nFlags & 4) && !FUN_10008a23(&bUnused1, &pIn, &nVerts, &pClipOut)) ||
@@ -473,10 +473,10 @@ Textured:
 					UnkType_TLVertex40 *pProj = pIn;
 					for (i = nVerts; i; i--)
 					{
-						FUN_10008895((float *)pProj, &g_ViewParams);
+						ProjectVertexToScreen((float *)pProj, &g_ViewParams);
 						pProj++;
 					}
-					DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pIn, nVerts, 0);
+					g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pIn, nVerts, 0);
 				}
 NextTri:
 				pIndex += 3;
@@ -488,12 +488,12 @@ NextTri:
 		if ((int)((char *)pOut - (char *)DAT_10070858) > 0)
 		{
 			FUN_1002cf10(pVerts, nTotal);
-			DAT_1005de30->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x2c4, pVerts, nTotal, DAT_10070858, pOut - DAT_10070858, 0);
+			g_pD3DDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x2c4, pVerts, nTotal, DAT_10070858, pOut - DAT_10070858, 0);
 		}
 	}
 	else
 	{
-		LTMatrix mFull = pParams->m_DeviceTimesProjection * pParams->m_Unk15c;
+		LTMatrix mFull = pParams->m_DeviceTimesProjection * pParams->m_mClipTransform;
 		UnkType_TLVertex40 *pCur = pVerts;
 
 		for (i = nTotal; i; i--)
@@ -503,7 +503,7 @@ NextTri:
 		}
 
 		if (pGrid->m_nIndices)
-			DAT_1005de30->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x2c4, pVerts, nTotal, pGrid->m_Indices, pGrid->m_nIndices, 0);
+			g_pD3DDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x2c4, pVerts, nTotal, pGrid->m_Indices, pGrid->m_nIndices, 0);
 	}
 
 	if (bEnvMap)
@@ -579,7 +579,7 @@ int FUN_1002c560(uint32 nClipFlags, uint32 *pOutFlags, float *pV0, float *pV1, f
 
 	if (nClipFlags & 2)
 	{
-		nInside = (pV0[2] <= g_ViewParams.m_Unk90) + (pV1[2] <= g_ViewParams.m_Unk90) + (pV2[2] <= g_ViewParams.m_Unk90);
+		nInside = (pV0[2] <= g_ViewParams.m_ClipFarZ) + (pV1[2] <= g_ViewParams.m_ClipFarZ) + (pV2[2] <= g_ViewParams.m_ClipFarZ);
 		if (nInside == 0)
 			return 1;
 		if (nInside != 3)
@@ -697,12 +697,12 @@ void d3d_DrawSolidPolyGrids()
 			// The BaseObjectSet::Draw filter (a portal view draws only what is not FLAG2_PORTALINVISIBLE / what is FLAG_PORTALVISIBLE).
 			if (pObj->m_Flags & FLAG_VISIBLE)
 			{
-				if (g_ViewParams.m_Unk4d4 && (pObj->m_Flags2 & FLAG2_PORTALINVISIBLE))
+				if (g_ViewParams.m_bPortalView && (pObj->m_Flags2 & FLAG2_PORTALINVISIBLE))
 					continue;
 			}
 			else
 			{
-				if (g_ViewParams.m_Unk4d4 && !(pObj->m_Flags & FLAG_PORTALVISIBLE))
+				if (g_ViewParams.m_bPortalView && !(pObj->m_Flags & FLAG_PORTALVISIBLE))
 					continue;
 			}
 

@@ -47,7 +47,7 @@ int DAT_1005328c;			// guess: warble table index (advanced per vertex)
 // The model lighting code and the light callback.
 // Callback data of ModelDraw::StaticLightCB (Jupiter's SStaticLightCallbackData analogue): the model drawer and the
 // matrix that takes the light positions into the model's space.
-struct UnkType_StaticLightCBData
+struct SStaticLightCallbackData
 {
 	ModelDraw	*m_Unk00;
 	LTMatrix	m_Unk04;
@@ -179,7 +179,7 @@ void FUN_1000b528(ViewParams *pParams, LTObject *pObject)
 
 	if (pInstance->m_AnimTracker.IsValid())
 	{
-		if (FUN_1000b584(pDraw, pInstance, &DAT_10056274))
+		if (FUN_1000b584(pDraw, pInstance, &g_ClipFlags))
 			pDraw->FUN_1000d3a7(pInstance);
 	}
 }
@@ -194,7 +194,7 @@ int FUN_1000b584(ModelDraw *pDraw, ModelInstance *pInstance, uint32 *pClipFlags)
 	pDraw->m_Unk634 = pModel->m_GlobalRadius;
 	pDraw->m_Unk634 = pDraw->m_Unk634 * LTMAX(pInstance->m_Scale.x, LTMAX(pInstance->m_Scale.y, pInstance->m_Scale.z));
 
-	pPlanes = g_ViewParams.m_Unk430;
+	pPlanes = g_ViewParams.m_ReallyCloseClipPlanes;
 	if (!(pInstance->m_Flags & FLAG_REALLYCLOSE))
 		pPlanes = g_ViewParams.m_ClipPlanes;
 
@@ -352,11 +352,11 @@ int ModelDraw::FUN_1000ba1c()
 void ModelDraw::CallModelHook()
 {
 	uint32 nFlags = m_pInstance->m_Flags;
-	m_Unk890.m_Flags = MHF_USETEXTURE;
-	m_Unk890.m_ObjectFlags = nFlags;
-	m_Unk890.m_hObject = (HLOCALOBJ)m_pInstance;
+	m_ModelHookData.m_Flags = MHF_USETEXTURE;
+	m_ModelHookData.m_ObjectFlags = nFlags;
+	m_ModelHookData.m_hObject = (HLOCALOBJ)m_pInstance;
 	if (g_pSceneDesc->m_ModelHookFn)
-		g_pSceneDesc->m_ModelHookFn(&m_Unk890, g_pSceneDesc->m_ModelHookUser);
+		g_pSceneDesc->m_ModelHookFn(&m_ModelHookData, g_pSceneDesc->m_ModelHookUser);
 }
 
 // ---- the model lighting (light callback, CastRayAtSky, GetDirLightAmount, SetupModelLight, w_GetLightVal) ----
@@ -364,7 +364,7 @@ void ModelDraw::CallModelHook()
 // FUNCTION: D3DREN 0x1000baa4
 void ModelDraw::StaticLightCB(WorldTreeObj *pObj, void *pUser)
 {
-	UnkType_StaticLightCBData *pData = (UnkType_StaticLightCBData *)pUser;
+	SStaticLightCallbackData *pData = (SStaticLightCallbackData *)pUser;
 	StaticLight *pStaticLight = (StaticLight *)pObj;
 
 	pData->m_Unk00->FUN_1000bafe(&pData->m_Unk04, &pStaticLight->m_Pos, pStaticLight->m_Radius,
@@ -377,7 +377,7 @@ void ModelDraw::StaticLightCB(WorldTreeObj *pObj, void *pUser)
 // FUNCTION: D3DREN 0x1000bafe
 void ModelDraw::FUN_1000bafe(LTMatrix *pMat, LTVector *pLightPos, float fRadius, float r, float g, float b, float r2, float g2, float b2, LTVector *pDir, float fFov)
 {
-	if ((uint32)m_Unk2bc < m_Unk2c0)
+	if ((uint32)m_nModelLights < m_nMaxModelLights)
 	{
 		LTVector vDiff = m_Unk5d0 - *pLightPos;
 		float fDist = vDiff.Mag();
@@ -399,19 +399,19 @@ void ModelDraw::FUN_1000bafe(LTMatrix *pMat, LTVector *pLightPos, float fRadius,
 				b = t * b2 + fInv * b;
 			}
 
-			UnkType_ModelLight *pLight = &m_Unk3c[m_Unk2bc];
+			UnkType_ModelLight *pLight = &m_Unk3c[m_nModelLights];
 
 			pLight->m_Unk1c.Init(r, g, b);
 			pLight->m_Unk1c.x *= DAT_10055ce8.x;
 			pLight->m_Unk1c.y *= DAT_10055ce8.y;
 			pLight->m_Unk1c.z *= DAT_10055ce8.z;
-			pLight->m_Unk1c *= m_Unk85c;
+			pLight->m_Unk1c *= m_ObjectColor;
 			MatVMul(&pLight->m_Unk00, pMat, pLightPos);
 			pLight->m_Unk10 = pLight->m_Unk00;
 			pLight->m_Unk0c = fRadius * fRadius;
 			pLight->m_Unk10.Norm();
 			pLight->m_Unk10 /= pLight->m_Unk0c;
-			m_Unk2bc++;
+			m_nModelLights++;
 		}
 	}
 }
@@ -472,11 +472,11 @@ float ModelDraw::GetDirLightAmount()
 	float fLongestDist = pWTRoot->m_Radius * -2.0f;
 	LTVector vDir = RENDERSTRUCT_LIGHTS->m_GlobalLightDir * fLongestDist;
 
-	if (g_CV_ModelSunVariance.m_Unk04 == 0.0f)
+	if (g_CV_ModelSunVariance.m_FloatVal == 0.0f)
 		return CastRayAtSky(m_Unk5d0, vDir) ? 1.0f : 0.0f;
 
 	LTVector vUp, vForward, vRight;
-	m_Unk4d0.GetBasisVectors(&vRight, &vUp, &vForward);
+	m_ModelTransform.GetBasisVectors(&vRight, &vUp, &vForward);
 	LTVector vLightUp = RENDERSTRUCT_LIGHTS->m_GlobalLightDir.Cross(vRight);
 
 	vLightUp *= m_pInstance->GetScaledRadius();
@@ -527,15 +527,15 @@ void ModelDraw::SetupModelLight()
 {
 	FindObjInfo foInfo;
 	LTMatrix mInvTransform;
-	UnkType_StaticLightCBData CallbackData;
+	SStaticLightCallbackData CallbackData;
 
-	m_Unk2bc = 0;
-	m_Unk2c0 = DAT_1005803c;
-	m_Unk2c0 = LTMIN(m_Unk2c0, 16);
+	m_nModelLights = 0;
+	m_nMaxModelLights = DAT_1005803c;
+	m_nMaxModelLights = LTMIN(m_nMaxModelLights, 16);
 
 	if (m_pModel->m_bNormalRef)
 	{
-		mInvTransform = m_Unk4d0 * (m_Unk550 * m_pModel->m_Transforms[m_pModel->m_iNormalRefNode] * m_pModel->m_mNormalRef);
+		mInvTransform = m_ModelTransform * (m_InvTransform * m_pModel->m_Transforms[m_pModel->m_iNormalRefNode] * m_pModel->m_mNormalRef);
 		if (m_pInstance->m_Flags & FLAG_REALLYCLOSE)
 			mInvTransform = g_ViewParams.m_mInvView * mInvTransform;
 		mInvTransform = ~mInvTransform;
@@ -544,27 +544,27 @@ void ModelDraw::SetupModelLight()
 	{
 		if (m_pInstance->m_Flags & FLAG_REALLYCLOSE)
 		{
-			mInvTransform = g_ViewParams.m_mInvView * m_Unk4d0;
+			mInvTransform = g_ViewParams.m_mInvView * m_ModelTransform;
 			mInvTransform = ~mInvTransform;
 		}
 		else
-			Mat_InverseTransformation(&m_Unk4d0, &mInvTransform);
+			Mat_InverseTransformation(&m_ModelTransform, &mInvTransform);
 	}
 
-	m_Unk85c.x = m_pInstance->m_ColorR;
-	m_Unk85c.y = m_pInstance->m_ColorG;
-	m_Unk85c.z = m_pInstance->m_ColorB;
-	m_Unk850 = g_pSceneDesc->m_GlobalModelLightAdd;
+	m_ObjectColor.x = m_pInstance->m_ColorR;
+	m_ObjectColor.y = m_pInstance->m_ColorG;
+	m_ObjectColor.z = m_pInstance->m_ColorB;
+	m_LightAdd = g_pSceneDesc->m_GlobalModelLightAdd;
 	CallModelHook();
-	m_Unk85c *= 1.0f / 255.0f;
+	m_ObjectColor *= 1.0f / 255.0f;
 	if (DAT_100578ec)
-		m_Unk85c *= g_CV_ModelSaturation.m_Unk04;
+		m_ObjectColor *= g_CV_ModelSaturation.m_Unk04;
 
 	if (m_pInstance->m_Flags & FLAG_NOLIGHT)
 	{
-		m_Unk874.Init();
-		m_Unk880 = 0.0f;
-		m_Unk884.Init(255.0f, 255.0f, 255.0f);
+		m_DirLightDir.Init();
+		m_DirLightAmount = 0.0f;
+		m_AmbientLight.Init(255.0f, 255.0f, 255.0f);
 		return;
 	}
 
@@ -573,8 +573,8 @@ void ModelDraw::SetupModelLight()
 		(RENDERSTRUCT_LIGHTS->m_GlobalLightColor.x == 0.0f && RENDERSTRUCT_LIGHTS->m_GlobalLightColor.y == 0.0f &&
 		RENDERSTRUCT_LIGHTS->m_GlobalLightColor.z == 0.0f))
 	{
-		m_Unk874.Init();
-		m_Unk880 = 0.0f;
+		m_DirLightDir.Init();
+		m_DirLightAmount = 0.0f;
 	}
 	else
 	{
@@ -583,36 +583,36 @@ void ModelDraw::SetupModelLight()
 			!m_Unk5d0.Equals(m_pInstance->m_Unknown2B0, g_CV_ModelSunVariance.m_Unk04 + 0.001f)))
 		{
 			m_pInstance->m_Unknown2B0 = m_Unk5d0;
-			m_Unk880 = GetDirLightAmount();
-			m_pInstance->m_Unknown2BC = m_Unk880;
+			m_DirLightAmount = GetDirLightAmount();
+			m_pInstance->m_Unknown2BC = m_DirLightAmount;
 		}
 		else
-			m_Unk880 = m_pInstance->m_Unknown2BC;
+			m_DirLightAmount = m_pInstance->m_Unknown2BC;
 
-		MatVMul_3x3(&m_Unk874, &mInvTransform, &RENDERSTRUCT_LIGHTS->m_GlobalLightDir);
-		m_Unk874 = -m_Unk874;
+		MatVMul_3x3(&m_DirLightDir, &mInvTransform, &RENDERSTRUCT_LIGHTS->m_GlobalLightDir);
+		m_DirLightDir = -m_DirLightDir;
 	}
 
-	m_Unk868 = RENDERSTRUCT_LIGHTS->m_GlobalLightColor * DAT_10055ce8;
+	m_DirLightColor = RENDERSTRUCT_LIGHTS->m_GlobalLightColor * DAT_10055ce8;
 
 	if (DAT_10056770)
 	{
 		LTRGB rgb;
 
 		w_GetLightVal(&DAT_10056770->m_LightTable, &m_Unk5d0, &rgb);
-		m_Unk884.x = rgb.r;
-		m_Unk884.y = rgb.g;
-		m_Unk884.z = rgb.b;
+		m_AmbientLight.x = rgb.r;
+		m_AmbientLight.y = rgb.g;
+		m_AmbientLight.z = rgb.b;
 	}
 	else
 	{
-		m_Unk884.x = 0.0f;
-		m_Unk884.y = 0.0f;
-		m_Unk884.z = 0.0f;
+		m_AmbientLight.x = 0.0f;
+		m_AmbientLight.y = 0.0f;
+		m_AmbientLight.z = 0.0f;
 	}
-	m_Unk884 *= DAT_10055ce8;
+	m_AmbientLight *= DAT_10055ce8;
 
-	m_Unk2bc = 0;
+	m_nModelLights = 0;
 
 	LTVector vNoDir;
 	uint32 i;
@@ -624,11 +624,11 @@ void ModelDraw::SetupModelLight()
 
 		FUN_1000bafe(&mInvTransform, &pLight->m_Pos, pLight->m_LightRadius,
 			pLight->m_ColorR, pLight->m_ColorG, pLight->m_ColorB, 0.0f, 0.0f, 0.0f, &vNoDir, -1.0f);
-		if ((uint32)m_Unk2bc >= m_Unk2c0)
+		if ((uint32)m_nModelLights >= m_nMaxModelLights)
 			break;
 	}
 
-	if ((uint32)m_Unk2bc < m_Unk2c0 && DAT_10056770)
+	if ((uint32)m_nModelLights < m_nMaxModelLights && DAT_10056770)
 	{
 		CallbackData.m_Unk00 = this;
 		CallbackData.m_Unk04 = mInvTransform;
@@ -843,7 +843,7 @@ void ModelDraw::FUN_1000ccd9(ModelInstance *pInstance, uint8 nAlpha)
 		aVerts[3].tu = DAT_10061810[0].m_Unk00;
 		aVerts[3].tv = 1.0f - DAT_10061810[0].m_Unk04;
 
-		if (g_CV_LightModelSprites.m_Unk00 && DAT_10056770)
+		if (g_CV_LightModelSprites.m_IntVal && DAT_10056770)
 		{
 			w_GetLightVal(&DAT_10056770->m_LightTable, &m_Unk5d0, &rgb);
 			r = DAT_1005a004[rgb.r];
@@ -868,7 +868,7 @@ void ModelDraw::FUN_1000ccd9(ModelInstance *pInstance, uint8 nAlpha)
 
 		pVerts = aVerts;
 		nVerts = 4;
-		DAT_10056274 = 0x3f;
+		g_ClipFlags = 0x3f;
 		if (FUN_1000af16(&pVerts, &nVerts, &g_ViewParams, 0))
 			FUN_1000d340(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 	}
@@ -879,10 +879,10 @@ void ModelDraw::FUN_1000ccd9(ModelInstance *pInstance, uint8 nAlpha)
 // FUNCTION: D3DREN 0x1000d340
 void FUN_1000d340(D3DPRIMITIVETYPE type, DWORD dwVertexTypeDesc, LPVOID lpvVertices, DWORD dwVertexCount, DWORD dwFlags)
 {
-	DAT_1005de30->DrawPrimitive(type, dwVertexTypeDesc, lpvVertices, dwVertexCount, dwFlags);
+	g_pD3DDevice->DrawPrimitive(type, dwVertexTypeDesc, lpvVertices, dwVertexCount, dwFlags);
 }
 
-// guess: 3 * the triangle count of the current LOD (m_Unk60c) of every piece.
+// guess: 3 * the triangle count of the current LOD (m_nLOD) of every piece.
 // FUNCTION: D3DREN 0x1000d35f
 int ModelDraw::FUN_1000d35f()
 {
@@ -891,7 +891,7 @@ int ModelDraw::FUN_1000d35f()
 
 	for (i = 0; i < m_pModel->NumPieces(); i++)
 	{
-		PieceLOD *pLOD = m_pModel->GetPiece(i)->GetLOD(m_Unk60c);
+		PieceLOD *pLOD = m_pModel->GetPiece(i)->GetLOD(m_nLOD);
 
 		if (pLOD)
 			nTris += pLOD->m_Tris.GetSize();
@@ -916,7 +916,7 @@ uint32 FUN_1000de1f(uint32 nKey1, uint32 nKey2)
 	return ((((((nKey2 & ~0x3f) << 6) | (nKey2 & 0x30)) << 6 | (nKey2 & 0xc)) << 6 | (nKey2 & 3)) << 6) | ((nKey1 >> 2) & 0x3f3f3f3f);
 }
 
-// guess: picks the LOD (m_Unk60c) from the distance m_Unk63c; with ModelLODBlendEnable it also computes the blend (m_Unk610/m_Unk614).
+// guess: picks the LOD (m_nLOD) from the distance m_fModelDist; with ModelLODBlendEnable it also computes the blend (m_bLODBlend/m_fLODBlend).
 // FUNCTION: D3DREN 0x1000de56
 void ModelDraw::FUN_1000de56()
 {
@@ -924,32 +924,32 @@ void ModelDraw::FUN_1000de56()
 	float fDist;
 	uint32 i;
 
-	m_Unk60c = 0;
-	fDist = m_Unk63c;
+	m_nLOD = 0;
+	fDist = m_fModelDist;
 	for (i = 0; i < m_pModel->m_LODDists.GetSize() + 1; i++)
 	{
 		if (fDist > *m_pModel->GetLODDist(i))
-			m_Unk60c = i;
+			m_nLOD = i;
 	}
 
-	m_Unk610 = 0;
-	if (g_CV_ModelLODBlendEnable.m_Unk00)
+	m_bLODBlend = 0;
+	if (g_CV_ModelLODBlendEnable.m_IntVal)
 	{
-		if (m_Unk60c + 1 < m_pModel->m_LODDists.GetSize() + 1)
+		if (m_nLOD + 1 < m_pModel->m_LODDists.GetSize() + 1)
 		{
-			float *pNext = m_pModel->GetLODDist(m_Unk60c + 1);
+			float *pNext = m_pModel->GetLODDist(m_nLOD + 1);
 			float fBlend;
 			float fDelta;
 
-			fRange = g_CV_ModelLODBlendDist.m_Unk04;
-			fBlend = (*pNext - *m_pModel->GetLODDist(m_Unk60c)) * 0.5f;
+			fRange = g_CV_ModelLODBlendDist.m_FloatVal;
+			fBlend = (*pNext - *m_pModel->GetLODDist(m_nLOD)) * 0.5f;
 			fRange = LTMIN(fRange, fBlend);
 			fDelta = *pNext - fDist;
 
 			if (fDelta < fRange)
 			{
-				m_Unk614 = 1.0f - fDelta / fRange;
-				m_Unk610 = 1;
+				m_fLODBlend = 1.0f - fDelta / fRange;
+				m_bLODBlend = 1;
 			}
 		}
 	}
@@ -1020,7 +1020,7 @@ UnkType_DrawState::UnkType_DrawState()
 // differences are unrelocated addresses): the matrix products are the SDK's `LTMatrix::operator*` (a hidden shared temporary at
 // [ebp-0x68]; with explicit MatMul calls and a named temporary the two REALLYCLOSE / else products were merged into one call with a
 // selected argument, which the exe does not do).  What is left is the direction of one cross-jump: after the products the exe emits the
-// shared `rep movsd` of `m_Unk510 = <temp>` inside the field-of-view block and lets the default case of the m_Unk8ac switch jump back
+// shared `rep movsd` of `m_Transform = <temp>` inside the field-of-view block and lets the default case of the m_Unk8ac switch jump back
 // to it (0x1000d953), ours emits it in the default case and jumps forward from the field-of-view block (3 bytes of size difference
 // in that region, `push 0x10; pop ecx` placement in the else branch).  No source shape tried (if/else vs ternary vs pointer for the
 // matrix source, memcpy, copy placement, block order) changes it; permuter 3000 candidates did not either.
@@ -1045,13 +1045,13 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 	else
 		m_Unk5d0 = pInstance->m_Pos;
 
-	if (!g_CV_DrawModelsRigid.m_Unk00 && m_pModel->m_bRigid)
+	if (!g_CV_DrawModelsRigid.m_IntVal && m_pModel->m_bRigid)
 		return;
 	if (!DAT_10057878 && (pInstance->m_Flags & FLAG_REALLYCLOSE))
 		return;
 
 	m_Unk30 = (m_pInstance->m_Flags >> 3) & 1;
-	DAT_1005872c(&m_Unk5d0, &m_Unk640);
+	g_pfnCalcFogAlpha(&m_Unk5d0, &m_Unk640);
 
 	fDistSqr = (m_Unk5d0 - g_ViewParams.m_Pos).MagSqr();
 	if (m_pModel->m_FadeRangeMaxSqr >= m_pModel->m_FadeRangeMinSqr)
@@ -1088,16 +1088,16 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 
 	m_Unk618 = ((DAT_10057dd0 || (pInstance->m_Flags & FLAG_ENVIRONMENTMAP)) && DAT_10057be0 && g_pStruct->m_pTexture10C) ? 1 : 0;
 
-	m_Unk63c = g_ViewParams.m_Pos.Dist(m_Unk5d0);
-	m_Unk63c = m_Unk63c / g_CV_ModelZoomScale.m_Unk04;
+	m_fModelDist = g_ViewParams.m_Pos.Dist(m_Unk5d0);
+	m_fModelDist = m_fModelDist / g_CV_ModelZoomScale.m_FloatVal;
 	FUN_1000de56();
 
-	if (m_pModel->m_bRigid && g_CV_ModelCacheRigid.m_Unk00)
+	if (m_pModel->m_bRigid && g_CV_ModelCacheRigid.m_IntVal)
 	{
 		ModelInstance *pInst = m_pInstance;
-		int nKey = FUN_1000de1f(m_Unk640, m_Unk60c);
+		int nKey = FUN_1000de1f(m_Unk640, m_nLOD);
 
-		if (!m_Unk610 && m_Unk8a8 == m_pInstance->m_ColorA)
+		if (!m_bLODBlend && m_Unk8a8 == m_pInstance->m_ColorA)
 		{
 			if (UnkType_ModelVBCacheHolder::DAT_10093b10.FUN_1003aabb((int)pInst, nKey))
 				m_Unk8ac = 2;
@@ -1120,23 +1120,23 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 
 	m_Unk638 = (DAT_10048788 && (pInstance->m_Flags & FLAG_MODELTINT) && pInstance->m_ColorA == 0xff) ? 1 : 0;
 
-	m_Unk8b0 = (m_Unk8ac || (g_CV_ModelUseTnL.m_Unk00 && !(m_pInstance->m_Flags & FLAG_REALLYCLOSE) && !m_pModel->m_bFovOffset)) ? 1 : 0;
+	m_Unk8b0 = (m_Unk8ac || (g_CV_ModelUseTnL.m_IntVal && !(m_pInstance->m_Flags & FLAG_REALLYCLOSE) && !m_pModel->m_bFovOffset)) ? 1 : 0;
 
-	d3d_SetupTransformation(&m_pInstance->m_Pos, (float *)&m_pInstance->m_Rotation, &m_pInstance->m_Scale, &m_Unk4d0);
+	d3d_SetupTransformation(&m_pInstance->m_Pos, (float *)&m_pInstance->m_Rotation, &m_pInstance->m_Scale, &m_ModelTransform);
 
 	if (m_pModel->m_bFovOffset)
 	{
 		LTMatrix mProj, mTemp2;
 		float fFovX, fFovY;
 
-		if (g_CV_ModelFovTest.m_Unk00)
+		if (g_CV_ModelFovTest.m_IntVal)
 		{
-			fFovX = (g_CV_ExtraFOVXOffset.m_Unk04 + m_pModel->m_FovXOffset) * g_ViewParams.m_Unk4c;
+			fFovX = (g_CV_ExtraFOVXOffset.m_FloatVal + m_pModel->m_FovXOffset) * g_ViewParams.m_fFovX;
 			if (fFovX < 0.17453292f)
 				fFovX = 0.17453292f;
 			else if (fFovX > 2.9670596f)
 				fFovX = 2.9670596f;
-			fFovY = (g_CV_ExtraFOVYOffset.m_Unk04 + m_pModel->m_FovYOffset) * g_ViewParams.m_Unk50;
+			fFovY = (g_CV_ExtraFOVYOffset.m_FloatVal + m_pModel->m_FovYOffset) * g_ViewParams.m_fFovY;
 			if (fFovY < 0.17453292f)
 				fFovY = 0.17453292f;
 			else if (fFovY > 2.9670596f)
@@ -1144,12 +1144,12 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 		}
 		else
 		{
-			fFovX = g_CV_ExtraFOVXOffset.m_Unk04 * 0.017453292f + m_pModel->m_FovXOffset + g_ViewParams.m_Unk4c;
+			fFovX = g_CV_ExtraFOVXOffset.m_FloatVal * 0.017453292f + m_pModel->m_FovXOffset + g_ViewParams.m_fFovX;
 			if (fFovX < 0.17453292f)
 				fFovX = 0.17453292f;
 			else if (fFovX > 2.9670596f)
 				fFovX = 2.9670596f;
-			fFovY = g_CV_ExtraFOVYOffset.m_Unk04 * 0.017453292f + m_pModel->m_FovYOffset + g_ViewParams.m_Unk50;
+			fFovY = g_CV_ExtraFOVYOffset.m_FloatVal * 0.017453292f + m_pModel->m_FovYOffset + g_ViewParams.m_fFovY;
 			if (fFovY < 0.17453292f)
 				fFovY = 0.17453292f;
 			else if (fFovY > 2.9670596f)
@@ -1162,50 +1162,50 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 			0.0f, 0.0f, 0.0f, 1.0f);
 		if (pInstance->m_Flags & FLAG_REALLYCLOSE)
 		{
-			mWork = mProj * g_ViewParams.m_Unk25c;
+			mWork = mProj * g_ViewParams.m_mShear;
 		}
 		else
 		{
-			mWork = mProj * g_ViewParams.m_Unk29c;
+			mWork = mProj * g_ViewParams.m_mShearView;
 		}
 		mTemp2 = g_ViewParams.m_DeviceTimesProjection * mWork;
-		m_Unk510 = mWork * m_Unk4d0;
+		m_Transform = mWork * m_ModelTransform;
 	}
 	else
 	{
 		if (pInstance->m_Flags & FLAG_REALLYCLOSE)
-			mWork = g_ViewParams.m_Unk2dc;
+			mWork = g_ViewParams.m_mReallyCloseClipTransform;
 		else
-			mWork = g_ViewParams.m_Unk15c;
+			mWork = g_ViewParams.m_mClipTransform;
 		switch (m_Unk8ac)
 		{
 		case 1:
-			m_Unk510 = m_Unk4d0;
-			DAT_10056274 = 1;
+			m_Transform = m_ModelTransform;
+			g_ClipFlags = 1;
 			break;
 		case 2:
-			m_Unk510.Identity();
-			DAT_10056274 = 1;
+			m_Transform.Identity();
+			g_ClipFlags = 1;
 			break;
 		default:
 			if (!m_Unk8b0)
 			{
-				m_Unk510 = mWork * m_Unk4d0;
+				m_Transform = mWork * m_ModelTransform;
 			}
 			else
 			{
-				m_Unk510 = m_Unk4d0;
-				DAT_10056274 = 1;
+				m_Transform = m_ModelTransform;
+				g_ClipFlags = 1;
 			}
 			break;
 		}
 	}
 
 	{
-		LTMatrix mInv = m_Unk510;
+		LTMatrix mInv = m_Transform;
 
 		mInv.Inverse();
-		m_Unk550 = mInv;
+		m_InvTransform = mInv;
 	}
 
 	if (!FUN_1000ba1c())
@@ -1214,8 +1214,8 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 	fOldNearZ = g_ViewParams.m_NearZ;
 	if (m_pInstance->m_Flags & FLAG_REALLYCLOSE)
 	{
-		DAT_10056274 |= 1;
-		g_ViewParams.m_NearZ = g_CV_ReallyCloseNearZ.m_Unk04;
+		g_ClipFlags |= 1;
+		g_ViewParams.m_NearZ = g_CV_ReallyCloseNearZ.m_FloatVal;
 	}
 
 	if (m_Unk8ac != 2)
@@ -1225,9 +1225,9 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 
 		for (i = 0; i < m_pModel->m_Transforms.GetSize(); i++)
 		{
-			m_pModel->m_Transforms[i] = m_Unk510 * pTransforms[i];
+			m_pModel->m_Transforms[i] = m_Transform * pTransforms[i];
 		}
-		if (!DAT_10056274)
+		if (!g_ClipFlags)
 			FUN_1000df7a(&g_ViewParams.m_DeviceTimesProjection);
 		SetupModelLight();
 	}
@@ -1238,13 +1238,13 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 
 		mA = g_ViewParams.m_mView * m_pModel->m_Transforms[m_pModel->m_iNormalRefNode];
 		MatMul(&mB, &mA, &m_pModel->m_mNormalRef);
-		m_Unk590 = mB;
+		m_EnvMapTransform = mB;
 	}
 	else
-		m_Unk590 = g_ViewParams.m_mView;
+		m_EnvMapTransform = g_ViewParams.m_mView;
 
 	if (m_pInstance->m_NodeControlFn && !(m_pInstance->m_Unknown188 & 8))
-		DAT_10056274 |= 0x3f;
+		g_ClipFlags |= 0x3f;
 
 	m_Unk5dc = DAT_10058484 ? FUN_1000ddb4 : FUN_1000dd18;
 	m_Unk5e0 = DAT_10058484 ? FUN_1000ddc5 : FUN_1000dd19;
@@ -1254,13 +1254,13 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 		m_pInstance->m_HookFn((HLOCALOBJ)m_pInstance, &m_Unk00c, 0);
 	if (m_Unk00c.m_Flags & MIH_CLIPPLANE)
 	{
-		m_Unk020 = g_ViewParams.m_Unk15c.TransformPlane(m_Unk00c.m_ClipPlane);
-		DAT_10056274 |= 1;
+		m_Unk020 = g_ViewParams.m_mClipTransform.TransformPlane(m_Unk00c.m_ClipPlane);
+		g_ClipFlags |= 1;
 	}
 
 	FUN_1002476b();
 	g_ViewParams.m_NearZ = fOldNearZ;
-	if (DAT_10056274)
+	if (g_ClipFlags)
 		DAT_100587e0++;
 	else
 		DAT_10058cdc++;

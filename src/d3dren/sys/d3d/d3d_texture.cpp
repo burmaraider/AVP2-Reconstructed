@@ -24,7 +24,7 @@
 #include "counter.h"
 #include "../../build/proj/LT2/lithshared/stdlith/object_bank.h"
 
-int FUN_10020ab0(UnkType_RTextureBuild *pBuild, UnkType_RTextureData *pData, uint32 iStartMipmap, uint32 nMipmaps, uint32 iFormat);
+int FUN_10020ab0(UnkType_RTextureBuild *pBuild, RTextureData *pData, uint32 iStartMipmap, uint32 nMipmaps, uint32 iFormat);
 void FUN_10032a30();	// 0x10032a30 (lightmap unit unk/100329b0)
 int FUN_10032c40(MainWorld *pWorld, WorldPoly *pPoly, uint8 *pBits, long pitch, uint32 w, uint32 h, char bNot32Bit);	// 0x10032c40 (unit unk/100329b0)
 // guess: counters of the dynamic lightmap refresh (FUN_10020ff0): staging lightmaps locked, and lightmaps where no light changed a texel
@@ -100,25 +100,25 @@ RTexture::RTexture()
 // (the scalar deleting destructors of RTexture's data class and of UnkType_RTextureBase are the same code: folded by the linker)
 
 // FUNCTION: D3DREN 0x1001e6f0 ?FUN_vslot1@UnkType_RTextureData@@UAEHXZ
-int UnkType_RTextureData::FUN_vslot1()
+int RTextureData::IsRTexture()
 {
 	return 1;
 }
 
 // FUNCTION: D3DREN 0x1001e700 ?IsFullbrite@UnkType_RTextureData@@UAEHXZ
-int UnkType_RTextureData::IsFullbrite()
+int RTextureData::IsFullbrite()
 {
 	return m_pOwner->m_Flags;
 }
 
 // FUNCTION: D3DREN 0x1001e710 ?GetBaseWidth@UnkType_RTextureData@@UAEHXZ
-int UnkType_RTextureData::GetBaseWidth()
+int RTextureData::GetBaseWidth()
 {
 	return m_pOwner->m_BaseWidth;
 }
 
 // FUNCTION: D3DREN 0x1001e720 ?GetBaseHeight@UnkType_RTextureData@@UAEHXZ
-int UnkType_RTextureData::GetBaseHeight()
+int RTextureData::GetBaseHeight()
 {
 	return m_pOwner->m_BaseHeight;
 }
@@ -177,8 +177,8 @@ RTexture *FUN_1001e750(uint32 width, uint32 height, uint32 flags)
 		pRTexture->m_Flags = 0;
 		pRTexture->m_BaseWidth = width;
 		pRTexture->m_Data.m_nTextureFrameCode = 0;
-		pRTexture->m_Data.m_Unk04 = 1.0f / (float)width;
-		pRTexture->m_Data.m_Unk08 = 1.0f / (float)height;
+		pRTexture->m_Data.m_fUScale = 1.0f / (float)width;
+		pRTexture->m_Data.m_fVScale = 1.0f / (float)height;
 		return pRTexture;
 	}
 	pSurface->Release();
@@ -311,18 +311,18 @@ void FUN_1001eb80()
 int FUN_1001ec50()
 {
 	memset(DAT_10062830, 0, sizeof(DAT_10062830));
-	DAT_100617d8[0] = 0;
-	DAT_100617d8[1] = 0;
+	g_pBoundTextures[0] = 0;
+	g_pBoundTextures[1] = 0;
 	DAT_100613a8.m_nElements = 0;
-	DAT_100617d8[2] = 0;
-	DAT_100617d8[3] = 0;
+	g_pBoundTextures[2] = 0;
+	g_pBoundTextures[3] = 0;
 	DAT_10062858.TieOff();
 	DAT_100613a8.m_Head.TieOff();
 	g_Textures.TieOff();
 	DAT_1007abe4.FUN_10034e3d();
 	DAT_100617e8.Init(0x40, 0);
 	DAT_10062874 = 1;
-	DAT_1005de30->EnumTextureFormats(FUN_1001f0d0, 0);
+	g_pD3DDevice->EnumTextureFormats(FUN_1001f0d0, 0);
 
 	// The wanted formats (bits of red, green, blue, alpha; one of these DDPF_ flags; none of these) in the order of preference.
 	UnkType_TextureFormatSpec spec32[1] = { { 8, 8, 8, 8, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
@@ -652,8 +652,8 @@ void FUN_1001f850(RTexture *pTexture, int bChained)
 
 	for (int i = 0; i < 2; i++)
 	{
-		if (pTexture == (RTexture *)DAT_100617d8[i])
-			DAT_100617d8[i] = 0;
+		if (pTexture == (RTexture *)g_pBoundTextures[i])
+			g_pBoundTextures[i] = 0;
 	}
 
 	if (pTexture->m_Data.m_pSurface)
@@ -826,7 +826,7 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 		return 0;
 
 	UnkType_RTextureBuild build;
-	UnkType_RTextureData data;
+	RTextureData data;
 	int iFormat;
 	int iStartMipmap, nMipmaps, nAvailable, i;
 
@@ -860,7 +860,7 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 		if (iGroup > 9)
 			iGroup = 9;
 		iStartMipmap = (&DAT_10057d44)[iGroup] + pTextureData->m_Header.m_Extra[4] + DAT_100584ac;
-		if (g_CV_S3TCEnable.m_Unk00 == 0)
+		if (g_CV_S3TCEnable.m_IntVal == 0)
 			iStartMipmap += pTextureData->m_Header.m_Extra[3];
 		if (iStartMipmap < 0)
 			iStartMipmap = 0;
@@ -925,7 +925,7 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 	pRTexture->m_Link.m_pData = pRTexture;
 	g_Textures.AddAfter(&pRTexture->m_Link);
 	RENDERSTRUCT_TEXMEM(g_pStruct) += pRTexture->m_Data.m_nMemory;
-	data.~UnkType_RTextureData();
+	data.~RTextureData();
 	if (!r_TransferTexture(pRTexture, pTextureData))
 	{
 		AddDebugMessage(4, "Unable to transfer texture data to video memory.");
@@ -1226,7 +1226,7 @@ static inline int InlineIsS3TCSupported(uint32 bpp)
 // jne, with ebp = bpp; ours emits the DXT path first and jumps to the shared one.  Tried: `if (bpp == 0) bpp = 3; else if (...)`
 // against two separate ifs, nesting the DXT test inside `if (bpp != 0)`.
 // STUB: D3DREN 0x10020ab0
-int FUN_10020ab0(UnkType_RTextureBuild *pBuild, UnkType_RTextureData *pData, uint32 iStartMipmap, uint32 nMipmaps, uint32 iFormat)
+int FUN_10020ab0(UnkType_RTextureBuild *pBuild, RTextureData *pData, uint32 iStartMipmap, uint32 nMipmaps, uint32 iFormat)
 {
 	TextureData *pTextureData = pBuild->m_pTextureData;
 	DDSURFACEDESC2 ddsd;
@@ -1252,7 +1252,7 @@ int FUN_10020ab0(UnkType_RTextureBuild *pBuild, UnkType_RTextureData *pData, uin
 	{
 		bpp = 3;
 	}
-	else if (bpp != 3 && g_CV_S3TCEnable.m_Unk00 && InlineIsS3TCSupported(bpp))
+	else if (bpp != 3 && g_CV_S3TCEnable.m_IntVal && InlineIsS3TCSupported(bpp))
 	{
 		bSupported = 1;
 		memset(&ddsd.ddpfPixelFormat, 0, sizeof(ddsd.ddpfPixelFormat));
@@ -1389,7 +1389,7 @@ int FUN_10020ff0(WorldPoly *pPoly, int bFirst)
 
 	if (bFirst)
 	{
-		RTexture *pBound = (RTexture *)DAT_100617d8[DAT_1005c838];
+		RTexture *pBound = (RTexture *)g_pBoundTextures[DAT_1005c838];
 		if (!pBound)
 			return 1;
 
@@ -1512,7 +1512,7 @@ RTexture *FUN_10021290(UnkType_RTextureBuild *pBuild, int bAdditional)
 		if (iGroup > 9)
 			iGroup = 9;
 		iStart = (&DAT_10057d44)[iGroup] + pTextureData->m_Header.m_Extra[4] + DAT_100584ac;
-		if (g_CV_S3TCEnable.m_Unk00 == 0)
+		if (g_CV_S3TCEnable.m_IntVal == 0)
 			iStart += pTextureData->m_Header.m_Extra[3];
 		if (iStart < 0)
 			iStart = 0;
@@ -1731,8 +1731,8 @@ int FUN_10021a80(SharedTexture *pSharedTexture, uint32 nStageFlags, float *pU, f
 	}
 done:
 	RTexture *pRTexture = (RTexture *)pSharedTexture->m_pRenderData;
-	*pU = pRTexture->m_Data.m_Unk04;
-	*pV = pRTexture->m_Data.m_Unk08;
+	*pU = pRTexture->m_Data.m_fUScale;
+	*pV = pRTexture->m_Data.m_fVScale;
 	return 1;
 }
 

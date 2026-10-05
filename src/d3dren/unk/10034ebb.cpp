@@ -126,9 +126,9 @@ void FUN_10034ebb()
 
 		if (pLightmapPass)
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
-			DAT_1005de30->GetTextureStageState(1, D3DTSS_COLOROP, &oldState);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
+			g_pD3DDevice->GetTextureStageState(1, D3DTSS_COLOROP, &oldState);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 
 			pBucket = pLightmapPass;
 			do
@@ -148,8 +148,8 @@ void FUN_10034ebb()
 				pBucket = pNext;
 			} while (pBucket);
 
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 0);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, oldState);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 0);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, oldState);
 		}
 	}
 
@@ -209,7 +209,7 @@ int FUN_10035071(WorldPoly *pPoly)
 
 	if (!WORLDPOLY_UNK30(pPoly) || !FUN_10020ff0(pPoly, 0))
 	{
-		if (!FUN_10009ea5((UnkType_Tex *)pPoly, DAT_1005c838))
+		if (!d3d_SetLightmapTexture(pPoly, DAT_1005c838))
 			goto Fallback;
 	}
 	else if (pVerts == verts)
@@ -241,7 +241,7 @@ int FUN_10035071(WorldPoly *pPoly)
 	if (pStateChange)
 		DAT_10063c90.FUN_10021db7(pStateChange, g_NormalTextureStage);
 
-	DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
+	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
 	DAT_10063c90.FUN_10021da6();
 	DAT_100566ac++;
 	return 1;
@@ -364,7 +364,7 @@ int FUN_10035416(WorldPoly *pPoly)
 	if (!FUN_1000af16(&pVerts, &nVerts, &g_ViewParams, 0))
 		return 0;
 
-	DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
+	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 	return 1;
 }
 
@@ -423,7 +423,7 @@ int FUN_100354bf(WorldPoly *pPoly)
 	if (pStateChange)
 		DAT_10063c90.FUN_10021db7(pStateChange, g_NormalTextureStage);
 
-	DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
+	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
 	DAT_10063c90.FUN_10021da6();
 	return 1;
 }
@@ -445,7 +445,7 @@ uint32 FUN_10035629(UnkType_PoolNode *pNode, int (*pfn)(WorldPoly *), int bFree,
 			pNext = pNode->m_Unk10;
 			if (!(((Surface *)((WorldPoly *)pNode->m_Unk00)->m_pSurface)->m_Flags & 0x8000) || ppDeferred == (UnkType_PoolNode **)-1)
 			{
-				DAT_10056274 = pNode->m_Unk0c;
+				g_ClipFlags = pNode->m_Unk0c;
 				result |= pfn((WorldPoly *)pNode->m_Unk00);
 			}
 			else
@@ -475,7 +475,7 @@ uint32 FUN_10035629(UnkType_PoolNode *pNode, int (*pfn)(WorldPoly *), int bFree,
 // FUNCTION: D3DREN 0x100356b8
 void FUN_100356b8(WorldPoly *pPoly)
 {
-	FUN_10007ddb(pPoly, &DAT_1005a308, 0)->m_Unk0c = DAT_10056274;
+	FUN_10007ddb(pPoly, &DAT_1005a308, 0)->m_Unk0c = g_ClipFlags;
 }
 
 // guess: sets the texture stage states of the lightmap passes: stage 0 modulates the diffuse colour with the base texture,
@@ -488,29 +488,29 @@ void FUN_100356d5()
 {
 	uint32 op;
 
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
 
 	op = D3DTOP_MODULATE;
 	if (DAT_1007d424)
 		op = D3DTOP_MODULATE2X;
 
 	if (DAT_100584e0)
-		DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+		g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 	else
-		DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, op);
+		g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, op);
 
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
 }
 
 // guess: restores the texture stage states after the lightmap passes.
 // FUNCTION: D3DREN 0x10035771
 void FUN_10035771()
 {
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 }
 
 // ---- pixelformat (engine twin: src/shared/pixelformat.cpp; Jupiter runtime/shared/src/pixelformat.cpp) --------------------------------

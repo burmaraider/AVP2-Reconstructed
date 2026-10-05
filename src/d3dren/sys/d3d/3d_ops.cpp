@@ -21,37 +21,37 @@ ConVar g_CV_NearZ("NearZ", 7.0f);
 ConVar g_CV_ReallyCloseNearZ("ReallyCloseNearZ", 0.01f);
 
 // GLOBAL: D3DREN 0x100584f8
-extern float DAT_100584f8;		// guess: derived from the VFog console variables by d3d_ReadExtraConsoleVariables (written elsewhere)
+extern float g_fVFogValueRange;		// guess: derived from the VFog console variables by d3d_ReadExtraConsoleVariables (written elsewhere)
 // GLOBAL: D3DREN 0x10058778
-extern float DAT_10058778;		// guess: same
+extern float g_fInvVFogHeightRange;		// guess: same
 
 // guess: member of ViewParams (the Talon g_ViewParams, include/d3dren/viewparams.h): stores the viewer position and derives the
 // vertical fog value and zone from its height; the height read is the global g_ViewParams.m_Pos.y, not an argument.
 // (W5: matches with the position passed as an LTVector by value, as the call sites copy it, and the two fog scale factors multiplied in
 // the exe's order.)
 // FUNCTION: D3DREN 0x1000f1a0
-void ViewParams::FUN_1000f1a0(LTVector vPos)
+void ViewParams::SetupFogViewPosition(LTVector vPos)
 {
-	float fFog;
+	float fDensity;
 	int nZone;
 
-	m_Unk4e4 = vPos;
+	m_FogViewPos = vPos;
 
-	if (g_ViewParams.m_Pos.y <= g_CV_VFogMinY.m_Unk04)
-		fFog = g_CV_VFogMinYVal.m_Unk04;
-	else if (g_ViewParams.m_Pos.y >= g_CV_VFogMaxY.m_Unk04)
-		fFog = g_CV_VFogMaxYVal.m_Unk04;
+	if (g_ViewParams.m_Pos.y <= g_CV_VFogMinY.m_FloatVal)
+		fDensity = g_CV_VFogMinYVal.m_FloatVal;
+	else if (g_ViewParams.m_Pos.y >= g_CV_VFogMaxY.m_FloatVal)
+		fDensity = g_CV_VFogMaxYVal.m_FloatVal;
 	else
-		fFog = (g_ViewParams.m_Pos.y - g_CV_VFogMinY.m_Unk04) * DAT_100584f8 * DAT_10058778 + g_CV_VFogMinYVal.m_Unk04;
-	m_Unk4f0 = fFog;
+		fDensity = (g_ViewParams.m_Pos.y - g_CV_VFogMinY.m_FloatVal) * g_fVFogValueRange * g_fInvVFogHeightRange + g_CV_VFogMinYVal.m_FloatVal;
+	m_fVFogViewDensity = fDensity;
 
-	if (g_ViewParams.m_Pos.y >= g_CV_VFogMaxY.m_Unk04)
+	if (g_ViewParams.m_Pos.y >= g_CV_VFogMaxY.m_FloatVal)
 		nZone = 1;
-	else if (g_ViewParams.m_Pos.y <= g_CV_VFogMinY.m_Unk04)
+	else if (g_ViewParams.m_Pos.y <= g_CV_VFogMinY.m_FloatVal)
 		nZone = 0;
 	else
 		nZone = 2;
-	m_Unk4f4 = nZone;
+	m_nVFogViewZone = nZone;
 }
 
 // GLOBAL: D3DREN 0x10056218

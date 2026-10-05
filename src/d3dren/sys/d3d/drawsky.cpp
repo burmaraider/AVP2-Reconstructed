@@ -83,30 +83,30 @@ int FUN_1002d0d0();
 
 
 // guess: Jupiter polyclip.h's clipper dispatch as an inline function of the original (the exe expands it in several of this unit's
-// functions; unit unk/100098d0 has the out-of-line copy FUN_1000afb1): the polygon *ppVerts / *pnVerts is clipped against the planes
+// functions; unit unk/100098d0 has the out-of-line copy ClipPoly): the polygon *ppVerts / *pnVerts is clipped against the planes
 // of nFlags; with the UseD3DClip console variable set only the near plane is.
-static inline int FUN_1000afb1_Inline(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
+static inline int ClipPoly(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 {
 	TLVertex *pOut;
 	TLVertex *pVerts;
 	int nVerts;
 	char c0, c1, c2, c3, c4, c5;
 
-	if (g_CV_UseD3DClip.m_Unk00)
+	if (g_CV_UseD3DClip.m_IntVal)
 	{
 		nFlags &= 1;
 		if (!nFlags)
 			return 1;
 	}
-	pOut = DAT_1005627c;
+	pOut = g_pClipScratchVerts;
 	pVerts = *ppVerts;
 	nVerts = *pnVerts;
-	if (((nFlags & 1) == 0 || FUN_1000b0cd(&c0, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 4) == 0 || FUN_1000b20c(&c1, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 8) == 0 || FUN_100063e0(&c2, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 0x10) == 0 || FUN_10006670(&c3, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 0x20) == 0 || FUN_10006900(&c4, &pVerts, &nVerts, &pOut))
-		&& ((nFlags & 2) == 0 || FUN_10006ba0(&c5, &pVerts, &nVerts, &pOut)))
+	if (((nFlags & 1) == 0 || ClipPolyNear(&c0, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 4) == 0 || ClipPolyLeft(&c1, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 8) == 0 || ClipPolyTop(&c2, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 0x10) == 0 || ClipPolyRight(&c3, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 0x20) == 0 || ClipPolyBottom(&c4, &pVerts, &nVerts, &pOut))
+		&& ((nFlags & 2) == 0 || ClipPolyFar(&c5, &pVerts, &nVerts, &pOut)))
 	{
 		*ppVerts = pVerts;
 		*pnVerts = nVerts;
@@ -135,7 +135,7 @@ int FUN_1002d0d0()
 	g_SkyMaxY = -10000.0f;
 	g_SkyMaxX = -10000.0f;
 
-	if (g_CV_AllSkyPortals.m_Unk00 && DAT_10056770)
+	if (g_CV_AllSkyPortals.m_IntVal && DAT_10056770)
 	{
 		ppPolys = DAT_10056770->m_SkyPolies.GetArray();
 		nPolys = DAT_10056770->m_SkyPolies.GetSize();
@@ -154,7 +154,7 @@ int FUN_1002d0d0()
 		UnkType_PolyVertex *pSrc = (UnkType_PolyVertex *)((uint8 *)pPoly + 0x58);
 		TLVertex *pDest = aVerts;
 		int i;
-		LTMatrix *pMat = (LTMatrix *)&g_ViewParams.m_Unk15c;
+		LTMatrix *pMat = (LTMatrix *)&g_ViewParams.m_mClipTransform;
 		for (i = 0; i < pPoly->m_nVertices; i++)
 		{
 			MatVMul_H(&pDest->m_Vec, pMat, pSrc->m_Vec);
@@ -164,7 +164,7 @@ int FUN_1002d0d0()
 
 		TLVertex *pVerts = aVerts;
 		int nVerts = pPoly->m_nVertices;
-		if (FUN_1000afb1_Inline(nClipFlags, &pVerts, &nVerts))
+		if (ClipPoly(nClipFlags, &pVerts, &nVerts))
 		{
 			for (i = 0; i < nVerts; i++)
 			{

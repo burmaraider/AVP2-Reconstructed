@@ -30,7 +30,7 @@ struct UnkType_ModelVertex
 struct UnkType_ModelDrawerVertexView
 {
 	uint8	m_Pad000[0x590];
-	float	m_Unk590, m_Unk594, m_Unk598;	// 0x590  guess: first row of the environment map matrix
+	float	m_EnvMapTransform, m_Unk594, m_Unk598;	// 0x590  guess: first row of the environment map matrix
 	uint8	m_Pad59c[4];
 	float	m_Unk5a0, m_Unk5a4, m_Unk5a8;	// 0x5a0  guess: second row
 	uint8	m_Pad5ac[0x61c - 0x5ac];
@@ -39,7 +39,7 @@ struct UnkType_ModelDrawerVertexView
 	uint8	m_Pad62c[4];
 	float	m_Unk630;						// 0x630  guess: specular scale
 	uint8	m_Pad634[0x874 - 0x634];
-	UnkType_Vec3	m_Unk874;				// 0x874  guess: light direction
+	UnkType_Vec3	m_DirLightDir;				// 0x874  guess: light direction
 };
 
 // GLOBAL: D3DREN 0x1004eb40

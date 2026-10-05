@@ -146,14 +146,14 @@ void d3d_DrawLine(const LTVector &src, const LTVector &dest, uint32 color)
 	verts[0].m_Vec = src;
 	verts[1].m_Vec = dest;
 
-	MatVMul_InPlace_H(&g_ViewParams.m_Unk15c, &verts[0].m_Vec);
-	MatVMul_InPlace_H(&g_ViewParams.m_Unk15c, &verts[1].m_Vec);
+	MatVMul_InPlace_H(&g_ViewParams.m_mClipTransform, &verts[0].m_Vec);
+	MatVMul_InPlace_H(&g_ViewParams.m_mClipTransform, &verts[1].m_Vec);
 
 	if (FUN_100161e0((float *)verts, 0x3f))
 	{
-		FUN_10008895((float *)&verts[0], &g_ViewParams);
-		FUN_10008895((float *)&verts[1], &g_ViewParams);
-		DAT_1005de30->DrawPrimitive(D3DPT_LINELIST, D3DFVF_TLVERTEX, verts, 2, 0);
+		ProjectVertexToScreen((float *)&verts[0], &g_ViewParams);
+		ProjectVertexToScreen((float *)&verts[1], &g_ViewParams);
+		g_pD3DDevice->DrawPrimitive(D3DPT_LINELIST, D3DFVF_TLVERTEX, verts, 2, 0);
 	}
 }
 
@@ -167,21 +167,21 @@ void ModelDraw::FUN_100244b3(uint32 *pbResult)
 	DAT_1004eb44 = 0.0f;
 	DAT_1004eb40 = 0.0f;
 	m_Unk4c8 = 0;
-	if (DAT_10048750 && (m_Unk890.m_Flags & MHF_USETEXTURE))
+	if (DAT_10048750 && (m_ModelHookData.m_Flags & MHF_USETEXTURE))
 		m_Unk4c8 = 1;
 	else
 		FUN_1000a27b(g_NormalTextureStage);
 
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FILLMODE, (unsigned long *)&DAT_10068030);
-	if (m_Unk890.m_ObjectFlags & FLAG_MODELWIREFRAME)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_WIREFRAME);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FILLMODE, (unsigned long *)&DAT_10068030);
+	if (m_ModelHookData.m_ObjectFlags & FLAG_MODELWIREFRAME)
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_WIREFRAME);
 
 	DWORD dwAlphaBlend;
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &dwAlphaBlend);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &dwAlphaBlend);
 
 	uint32 bResult = 0;
-	if (DAT_1005c808 && DAT_10048764 && DAT_100617d8[g_NormalTextureStage] &&
-		((RTexture *)DAT_100617d8[g_NormalTextureStage])->IsFullbrite() && !dwAlphaBlend)
+	if (DAT_1005c808 && DAT_10048764 && g_pBoundTextures[g_NormalTextureStage] &&
+		((RTexture *)g_pBoundTextures[g_NormalTextureStage])->IsFullbrite() && !dwAlphaBlend)
 	{
 		bResult = 1;
 		if (DAT_100584a8)
@@ -209,7 +209,7 @@ void ModelDraw::FUN_10024589(uint32 iSkin)
 	{
 		SharedTexture *pSkin = m_pInstance->m_pSkins[iSkin];
 
-		if (g_CV_ModelTexture.m_Unk00 && d3d_SetTexture(pSkin, m_Unk34, m_Unk8a4))
+		if (g_CV_ModelTexture.m_IntVal && d3d_SetTexture(pSkin, m_Unk34, m_Unk8a4))
 		{
 			// (written `DAT_1005de1c * scale`: that gives the exe's fld c / fld uv / fmul st(1); `scale * DAT_1005de1c` came out as fld c / fld st(0) / fmul uv)
 			DAT_1004eb40 = DAT_1005de1c * DAT_10061810[0].m_Unk00;
@@ -225,13 +225,13 @@ void ModelDraw::FUN_10024589(uint32 iSkin)
 
 		if (m_Unk30 && pSkin->m_pLinkedTexture)
 		{
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, DAT_10067be8);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, DAT_10067be8);
 			d3d_SetTexture(pSkin->m_pLinkedTexture, 1, 0);
 		}
 		else if (m_Unk5e8 < 2)
 		{
-			DAT_1005de30->GetTextureStageState(1, D3DTSS_COLOROP, (unsigned long *)&DAT_10067be8);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, 1);
+			g_pD3DDevice->GetTextureStageState(1, D3DTSS_COLOROP, (unsigned long *)&DAT_10067be8);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, 1);
 			FUN_1000a27b(1);
 		}
 
@@ -258,12 +258,12 @@ struct UnkType_SavedStage1
 // FUNCTION: D3DREN 0x100246b7
 void FUN_100246b7(UnkType_SavedStage1 *pSaved)
 {
-	DAT_1005de30->GetTextureStageState(1, D3DTSS_COLOROP, (unsigned long *)&pSaved->m_Unk00);
-	DAT_1005de30->GetTextureStageState(1, D3DTSS_ADDRESS, (unsigned long *)&pSaved->m_Unk04);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_ADD);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
+	g_pD3DDevice->GetTextureStageState(1, D3DTSS_COLOROP, (unsigned long *)&pSaved->m_Unk00);
+	g_pD3DDevice->GetTextureStageState(1, D3DTSS_ADDRESS, (unsigned long *)&pSaved->m_Unk04);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_ADD);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 	DAT_10067be8 = D3DTOP_ADD;
 }
 
@@ -271,8 +271,8 @@ void FUN_100246b7(UnkType_SavedStage1 *pSaved)
 // FUNCTION: D3DREN 0x1002473b
 void FUN_1002473b(UnkType_SavedStage1 *pSaved)
 {
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, pSaved->m_Unk00);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_ADDRESS, pSaved->m_Unk04);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, pSaved->m_Unk00);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_ADDRESS, pSaved->m_Unk04);
 }
 
 // ---- FUN_1002476b --------------------------------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ void ModelDraw::FUN_1002476b()
 	m_Unk34 = 0;
 
 	DWORD dwOldAlphaBlend;
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &dwOldAlphaBlend);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &dwOldAlphaBlend);
 
 	IDirectDrawSurface7 *pOldTex;
 	int bTransform = 1;
@@ -313,11 +313,11 @@ void ModelDraw::FUN_1002476b()
 		m_Unk4c4 = 0;
 		FUN_100045a0(0);
 		bTransform = 0;
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
 	}
 
 	if ((float)m_Unk8a8 < 255.0f)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
 
 	if (!DAT_10057dd0)
 	{
@@ -325,8 +325,8 @@ void ModelDraw::FUN_1002476b()
 		{
 			m_Unk5e8 = 2;
 			m_Unk38 = 0x101;
-			DAT_1005de30->GetTexture(2, &pOldTex);
-			DAT_1005de30->SetTexture(2, DAT_10062880);
+			g_pD3DDevice->GetTexture(2, &pOldTex);
+			g_pD3DDevice->SetTexture(2, DAT_10062880);
 			StageStateSet ss0(1, D3DTSS_TEXCOORDINDEX, 0);
 			StageStateSet ss1(1, D3DTSS_COLOROP, D3DTOP_BUMPENVMAP);
 			StageStateSet ss2(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -350,31 +350,31 @@ void ModelDraw::FUN_1002476b()
 			StageStateSet ss15(2, D3DTSS_MAGFILTER, D3DTFG_LINEAR);
 			StageStateSet ss16(2, D3DTSS_MINFILTER, D3DTFN_LINEAR);
 			FUN_10024c8b((PFN_FillTexCoords)FUN_100013e0, (PFN_GenTexCoords)FUN_10001490, 1);
-			DAT_1005de30->SetTexture(2, pOldTex);
+			g_pD3DDevice->SetTexture(2, pOldTex);
 		}
 		else
 		{
-			if (g_CV_ModelSpecular.m_Unk00 && DAT_1005c80c && m_pModel->m_bSpecularEnable && DAT_10062880)
+			if (g_CV_ModelSpecular.m_IntVal && DAT_1005c80c && m_pModel->m_bSpecularEnable && DAT_10062880)
 			{
 				m_Unk5e8 = 2;
-					DAT_1005de30->GetTexture(1, &pOldTex);
-				DAT_1005de30->SetTexture(1, DAT_10062880);
+					g_pD3DDevice->GetTexture(1, &pOldTex);
+				g_pD3DDevice->SetTexture(1, DAT_10062880);
 				StageStateSet(1, D3DTSS_COLOROP, D3DTOP_ADD);
 				StageStateSet(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 				StageStateSet(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
 				StageStateSet(1, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 				FUN_10024c8b((PFN_FillTexCoords)FUN_100013e0, (PFN_GenTexCoords)FUN_10001490, 1);
-				DAT_1005de30->SetTexture(1, pOldTex);
+				g_pD3DDevice->SetTexture(1, pOldTex);
 			}
 			else if (m_Unk30)
 			{
 				m_Unk5e8 = 2;
-				DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_ADDSIGNED);
-				DAT_1005de30->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_ADDSIGNED);
+				g_pD3DDevice->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 				DAT_10067be8 = D3DTOP_ADDSIGNED;
 				FUN_10024c8b((PFN_FillTexCoords)FUN_10001390, (PFN_GenTexCoords)FUN_10001410, 1);
-				DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-				DAT_1005de30->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+				g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+				g_pD3DDevice->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
 			}
 			else
 			{
@@ -384,16 +384,16 @@ void ModelDraw::FUN_1002476b()
 		}
 	}
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, dwOldAlphaBlend);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, dwOldAlphaBlend);
 
-	if (m_Unk890.m_ObjectFlags & FLAG_SHADOW)
+	if (m_ModelHookData.m_ObjectFlags & FLAG_SHADOW)
 		DrawModelShadows();
 
 	if (DAT_100584d0)
 		FUN_1002421e();
 
-	if (m_Unk890.m_ObjectFlags & FLAG_REALLYCLOSE)
-		g_ViewParams.m_NearZ = g_CV_NearZ.m_Unk04;
+	if (m_ModelHookData.m_ObjectFlags & FLAG_REALLYCLOSE)
+		g_ViewParams.m_NearZ = g_CV_NearZ.m_FloatVal;
 }
 
 // ---- FUN_10024c8b / FUN_10024cd7 -----------------------------------------------------------------------------------------
@@ -420,7 +420,7 @@ void ModelDraw::FUN_10024c8b(PFN_FillTexCoords pfnTexFill, PFN_GenTexCoords pfnS
 // FUNCTION: D3DREN 0x10024cd7
 void FUN_10024cd7()
 {
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_FILLMODE, DAT_10068030);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, DAT_10068030);
 }
 
 // ---- d3d_ProcessModel ----------------------------------------------------------------------------------------------------
@@ -456,13 +456,13 @@ void d3d_DrawSolidModels()
 		BaseObjectSet *pSet = &d3d_GetVisibleSet()->m_SolidModels;
 		if (pSet->m_nObjects)
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
 			pSet->Draw(&g_ViewParams, FUN_1000b528);
-			DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 		}
 	}
 }
@@ -502,9 +502,9 @@ void d3d_QueueTranslucentModels()
 // FUNCTION: D3DREN 0x10024e2e
 static void d3d_DrawTranslucentModel(ViewParams *pParams, LTObject *pObject)
 {
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
 
 	uint32 srcBlend, destBlend, dwFog, dwFogColor;
 	d3d_GetBlendStates(pObject, srcBlend, destBlend, dwFog, dwFogColor);
@@ -516,7 +516,7 @@ static void d3d_DrawTranslucentModel(ViewParams *pParams, LTObject *pObject)
 
 	FUN_1000b528(&g_ViewParams, pObject);
 
-	DAT_1005de30->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 }
 
 // d3d_GetBlendStates is the inline of d3d_draw.h; the exe's out-of-line copy (0x10024f8c) is emitted here, the first object that called it.

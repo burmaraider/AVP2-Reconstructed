@@ -36,9 +36,9 @@ int FUN_100185a0(void *pPolyData, uint32 nPolyData, LightAnim *pAnim, uint32 *pR
 // 0x10024f8c (emitted in the drawmodel object, the first one that did not expand it); the A objects expand it, the P objects call it.
 inline void d3d_GetBlendStates(LTObject *pObject, uint32 &srcBlend, uint32 &destBlend, uint32 &dwFog, uint32 &dwFogColor)
 {
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGCOLOR, (unsigned long *)&dwFogColor);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGCOLOR, (unsigned long *)&dwFogColor);
 
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, (unsigned long *)&dwFog);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, (unsigned long *)&dwFog);
 	if ((pObject->m_Flags & FLAG_FOGDISABLE) && pObject->m_ObjectType != OT_MODEL)
 	{
 		dwFog = 0;

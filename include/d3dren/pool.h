@@ -21,7 +21,7 @@ struct UnkType_PoolNode
 	void				*m_Unk00;		// guess: the queued item
 	int					m_Unk04;
 	int					m_Unk08;
-	int					m_Unk0c;		// guess: the render state word (DAT_10056274) at the time it was queued
+	int					m_Unk0c;		// guess: the render state word (g_ClipFlags) at the time it was queued
 	UnkType_PoolNode	*m_Unk10;		// guess: next node
 	uint32				m_Unk14;		// 0x14 guess: draw flags of a queued lightmap poly (bit 0 lightmapped, bit 1 saturate blend, bit 2 keep vertex alpha); only set by FUN_100099b9
 };
@@ -82,7 +82,7 @@ void FUN_100083ec(WorldPoly *pPoly, UnkType_TLVertex40 *pVerts, int param_3);
 // guess: pushes pPoly on the deferred draw list DAT_1004ffb8.
 void FUN_100083bf(WorldPoly *pPoly);
 // guess: projects/clips the 0x28-byte vertex array (*ppVerts, *pnVerts) through the view transform at pViewParams (g_ViewParams,
-// 0x10055cf8): in camera space with the clip mask DAT_10056274 when that is non-zero.  Returns 0 when nothing is left.
+// 0x10055cf8): in camera space with the clip mask g_ClipFlags when that is non-zero.  Returns 0 when nothing is left.
 // The fourth argument is not used (every caller in the exe passes 0).
 int FUN_100085f2(UnkType_TLVertex40 **ppVerts, int *pnVerts, void *pViewParams, int param_4);
 // guess: world space -> camera space for one vertex position: in-place 3x4 transform of pVec by the row-major matrix at pMatrix
@@ -91,7 +91,7 @@ void FUN_10008719(float *pVec, const float *pMatrix);
 // guess: clips the 0x28-byte polygon by the planes of the mask flags; same contract as Jupiter polyclip.h.
 int FUN_10008779(uint32 flags, UnkType_TLVertex40 **ppVerts, int *pnVerts);
 // guess: camera space -> screen space for one vertex: rhw = 1/z, x, y scaled and offset through the viewport values at pViewParams+0x31c.., z mapped.
-void FUN_10008895(float *pVert, const void *pViewParams);
+void ProjectVertexToScreen(float *pVert, const void *pViewParams);
 // guess: the 0x28-byte-vertex plane clippers (near FUN_100088ec / left FUN_10008a23); first argument unused (Jupiter polyclip.h expanded out of line).
 int FUN_100088ec(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
 int FUN_10008a23(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);

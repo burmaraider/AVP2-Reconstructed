@@ -15,9 +15,9 @@
 #include "d3dren/scenedesc.h"
 #include "d3dren/visibleset.h"
 #include "d3dren/drawobjects.h"
-#include "d3dren/d3dstate.h"		// DAT_1005de30 (the device), DAT_100617d8 (the textures bound per stage)
+#include "d3dren/d3dstate.h"		// DAT_1005de30 (the device), g_pBoundTextures (the textures bound per stage)
 #include "d3dren/tlvertex.h"
-#include "d3dren/pool.h"			// FUN_10008895 (projects a TL vertex)
+#include "d3dren/pool.h"			// ProjectVertexToScreen (projects a TL vertex)
 #include "d3dren/3d_ops.h"
 #include "d3dren/fixedpoint.h"		// RoundFloatToInt
 
@@ -88,13 +88,13 @@ void FUN_10023d80(ViewParams *pParams, LTObject *pObject)
 
 	if (DAT_1005849c)
 	{
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, 0);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, 0);
 	}
 
 	d3d_DisableTexture(g_NormalTextureStage);
 
 	d3d_SetupTransformation(&pObject->GetPos(), (float*)&pObject->m_Rotation, &pObject->m_Scale, &mObject);
-	MatMul(&mFinal, &g_ViewParams.m_Unk15c, &mObject);
+	MatMul(&mFinal, &g_ViewParams.m_mClipTransform, &mObject);
 
 	fAlphaScale = (float)pSystem->m_ColorA;
 
@@ -120,9 +120,9 @@ void FUN_10023d80(ViewParams *pParams, LTObject *pObject)
 
 			if (FUN_100161e0((float*)Verts, 0x3f))
 			{
-				FUN_10008895((float*)&Verts[0], &g_ViewParams);
-				FUN_10008895((float*)&Verts[1], &g_ViewParams);
-				DAT_1005de30->DrawPrimitive(D3DPT_LINELIST, 0x1c4, Verts, 2, 0);
+				ProjectVertexToScreen((float*)&Verts[0], &g_ViewParams);
+				ProjectVertexToScreen((float*)&Verts[1], &g_ViewParams);
+				g_pD3DDevice->DrawPrimitive(D3DPT_LINELIST, 0x1c4, Verts, 2, 0);
 			}
 
 			pLine = pLine->m_pNext;
@@ -131,6 +131,6 @@ void FUN_10023d80(ViewParams *pParams, LTObject *pObject)
 
 	if (DAT_1005849c)
 	{
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, 1);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, 1);
 	}
 }

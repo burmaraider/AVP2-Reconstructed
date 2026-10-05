@@ -16,7 +16,7 @@
 #include "d3dren/common_stuff.h"
 #include "d3dren/rendererconsolevars.h"
 #include "d3dren/visibleset.h"
-#include "d3dren/viewparams.h"	// g_ViewParams, DAT_10056274 (clip plane mask)
+#include "d3dren/viewparams.h"	// g_ViewParams, g_ClipFlags (clip plane mask)
 #include "d3dren/drawobjects.h"	// ObjectHandler, g_ObjectHandlers
 
 // Globals of other units that this one reads.  Names in Ghidra style unless names_proposal.csv has a high row.
@@ -57,9 +57,9 @@ void BaseObjectSet::Draw(ViewParams *pParams, DrawObjectFn fn)
 		pObj = m_pObjects[i];
 		flags = pObj->m_Flags;
 		if (flags & FLAG_VISIBLE)
-			bDraw = !pParams->m_Unk4d4 || !(pObj->m_Flags2 & FLAG2_PORTALINVISIBLE);
+			bDraw = !pParams->m_bPortalView || !(pObj->m_Flags2 & FLAG2_PORTALINVISIBLE);
 		else
-			bDraw = pParams->m_Unk4d4 && (flags & FLAG_PORTALVISIBLE);
+			bDraw = pParams->m_bPortalView && (flags & FLAG_PORTALVISIBLE);
 		if (bDraw)
 			fn(pParams, pObj);
 	}
@@ -224,8 +224,8 @@ static inline int d3d_ShouldProcessObject(LTObject *pObject)
 	return	g_ObjectHandlers[(char)pObject->m_ObjectType].m_ProcessObjectFn &&
 			(char)pObject->m_ObjectType != OT_POLYGRID &&
 			!(pObject->m_Flags2 & FLAG2_SKYOBJECT) &&
-			(((pObject->m_Flags & FLAG_VISIBLE) && (!g_ViewParams.m_Unk4d4 || !(pObject->m_Flags2 & FLAG2_PORTALINVISIBLE))) ||
-			 (!(pObject->m_Flags & FLAG_VISIBLE) && g_ViewParams.m_Unk4d4 && (pObject->m_Flags & FLAG_PORTALVISIBLE)));
+			(((pObject->m_Flags & FLAG_VISIBLE) && (!g_ViewParams.m_bPortalView || !(pObject->m_Flags2 & FLAG2_PORTALINVISIBLE))) ||
+			 (!(pObject->m_Flags & FLAG_VISIBLE) && g_ViewParams.m_bPortalView && (pObject->m_Flags & FLAG_PORTALVISIBLE)));
 }
 
 // Process attachments (possibly recursively).
@@ -437,7 +437,7 @@ void FUN_10039540(int bUseVisBSP)
 			CountAdder cntAdd((uint32*)((uint8*)g_pStruct + 0x58));
 
 			request.m_iObjArray = NOA_Objects;
-			pViewPos = g_ViewParams.m_Unk4d4 ? (LTVector*)((uint8*)&g_ViewParams + 0x4d8) : &g_ViewParams.m_Pos;
+			pViewPos = g_ViewParams.m_bPortalView ? (LTVector*)((uint8*)&g_ViewParams + 0x4d8) : &g_ViewParams.m_Pos;
 			request.m_Viewpoint = *pViewPos;
 			request.m_ViewRadius = 10000.0f;
 			request.m_AddObject = (VQAddObjectFn)FUN_10039900;
@@ -464,7 +464,7 @@ void FUN_10039540(int bUseVisBSP)
 				pPoly = *ppPoly;
 				if (pPoly->m_pPlane->DistTo(g_ViewParams.m_Pos) > 0.01f)
 				{
-					DAT_10056274 = 0x3f;
+					g_ClipFlags = 0x3f;
 					pPlane = VIEW_CLIPPLANES;
 					for (i = 0; i < 6; pPlane++, i++)
 					{
@@ -473,7 +473,7 @@ void FUN_10039540(int bUseVisBSP)
 							goto NextPoly;
 
 						if (pPoly->m_Radius < fDist)
-							DAT_10056274 &= ~(1 << i);
+							g_ClipFlags &= ~(1 << i);
 					}
 
 					DAT_10056688++;

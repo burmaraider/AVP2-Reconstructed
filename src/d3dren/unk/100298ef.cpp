@@ -193,8 +193,8 @@ int DrawPolyMgr::FUN_10029c5b(WorldPoly *pPoly, int iStage)
 		{
 			if (FUN_10021a80(pDetail, iStage, &m_Unk770[iStage][0], &m_Unk770[iStage][1]))
 			{
-				m_Unk788 = g_CV_DetailTextureScale.m_Unk04 * m_Unk770[iStage][0];
-				m_Unk78c = g_CV_DetailTextureScale.m_Unk04 * m_Unk770[iStage][1];
+				m_Unk788 = g_CV_DetailTextureScale.m_FloatVal * m_Unk770[iStage][0];
+				m_Unk78c = g_CV_DetailTextureScale.m_FloatVal * m_Unk770[iStage][1];
 			}
 		}
 	}
@@ -220,7 +220,7 @@ int DrawPolyMgr::FUN_10029ccb(WorldPoly *pPoly, int iStage, int a3)
 // FUNCTION: D3DREN 0x10029ce6
 int DrawPolyMgr::FUN_10029ce6(WorldPoly *pPoly, int iStage, int a3)
 {
-	return FUN_10009ea5((UnkType_Tex *)pPoly, iStage);
+	return d3d_SetLightmapTexture(pPoly, iStage);
 }
 
 // guess: binds the detail texture (the surface texture's linked texture) on the stage and sets the detail scale from the stage's
@@ -234,8 +234,8 @@ int DrawPolyMgr::FUN_10029cf8(WorldPoly *pPoly, int iStage, int a3)
 		SharedTexture *pDetail = pTexture->m_pLinkedTexture;
 		if (pDetail && d3d_SetTexture(pDetail, iStage, 0))
 		{
-			m_Unk788 = g_CV_DetailTextureScale.m_Unk04 * DAT_10061810[iStage].m_Unk00;
-			m_Unk78c = g_CV_DetailTextureScale.m_Unk04 * DAT_10061810[iStage].m_Unk04;
+			m_Unk788 = g_CV_DetailTextureScale.m_FloatVal * DAT_10061810[iStage].m_Unk00;
+			m_Unk78c = g_CV_DetailTextureScale.m_FloatVal * DAT_10061810[iStage].m_Unk04;
 			return 1;
 		}
 	}
@@ -304,7 +304,7 @@ void FUN_10029e39(WorldPoly *pPoly, int *pBucket, uint32 *pKey)
 // FUNCTION: D3DREN 0x10029e53
 int __fastcall FUN_10029e53(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 {
-	DAT_10056274 = nFlags;
+	g_ClipFlags = nFlags;
 	return FUN_1000af16(ppVerts, pnVerts, &g_ViewParams, 0);
 }
 
@@ -312,7 +312,7 @@ int __fastcall FUN_10029e53(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 // FUNCTION: D3DREN 0x10029e70
 int __fastcall FUN_10029e70(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 {
-	DAT_10056274 = nFlags;
+	g_ClipFlags = nFlags;
 	return FUN_100085f2((UnkType_TLVertex40 **)ppVerts, pnVerts, &g_ViewParams, 0);
 }
 
@@ -320,7 +320,7 @@ int __fastcall FUN_10029e70(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 // FUNCTION: D3DREN 0x10029e8d
 int __fastcall FUN_10029e8d(uint32 nFlags, TLVertex **ppVerts, int *pnVerts)
 {
-	return FUN_1000afb1(nFlags, ppVerts, pnVerts);
+	return ClipPoly(nFlags, ppVerts, pnVerts);
 }
 
 // guess: clip only, 0x28-byte vertices
@@ -373,7 +373,7 @@ static UnkType_DPMColorFn s_ColorFns[3] =								// 0x1004bc20
 {
 	&DrawPolyMgr::FUN_10029d60, &DrawPolyMgr::FUN_10029d6b, &DrawPolyMgr::FUN_10029da6
 };
-static UnkType_DPMFogFn *s_FogFns[2] = { &DAT_1005872c, &DAT_10058c40 };	// 0x1004bc2c
+static UnkType_DPMFogFn *s_FogFns[2] = { &g_pfnCalcFogAlpha, &DAT_10058c40 };	// 0x1004bc2c
 static int s_VertexSizes[4] = { 0, 0x20, 0x28, 0x30 };					// 0x1004bc34 (by the number of stages)
 static UnkType_DPMClipFn s_ClipFns[4] = { 0, FUN_10029e53, FUN_10029e70, FUN_10029eaf };	// 0x1004bc44
 static UnkType_DPMClipFn s_ClipOnlyFns[4] = { 0, FUN_10029e8d, FUN_10029e9e, FUN_10029eaf };	// 0x1004bc54
@@ -419,28 +419,28 @@ void DrawPolyMgr::FUN_10029ecf(WorldPoly *pPoly, int iPass)
 // FUNCTION: D3DREN 0x10029f9a
 void DrawPolyMgr::FUN_10029f9a(UnkType_DPMPass *pPass, UnkType_DPMPassList *pList)
 {
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, pPass->m_Unk00);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, pPass->m_Unk00);
 	uint32 i;
 	i = 0;
 	if (pPass->m_Unk00)
 	{
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, pList->m_SrcBlend);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, pList->m_DestBlend);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, pList->m_SrcBlend);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, pList->m_DestBlend);
 	}
 	for (i = 0; i < pPass->m_nStages; i++)
 	{
 		UnkType_DPMStageStates &st = pList->m_Stages[i];
-		DAT_1005de30->SetTextureStageState(i, D3DTSS_COLOROP, st.m_ColorOp);
+		g_pD3DDevice->SetTextureStageState(i, D3DTSS_COLOROP, st.m_ColorOp);
 		if (st.m_ColorOp != D3DTOP_DISABLE)
 		{
-			DAT_1005de30->SetTextureStageState(i, D3DTSS_COLORARG1, st.m_ColorArg1);
-			DAT_1005de30->SetTextureStageState(i, D3DTSS_COLORARG2, st.m_ColorArg2);
+			g_pD3DDevice->SetTextureStageState(i, D3DTSS_COLORARG1, st.m_ColorArg1);
+			g_pD3DDevice->SetTextureStageState(i, D3DTSS_COLORARG2, st.m_ColorArg2);
 		}
-		DAT_1005de30->SetTextureStageState(i, D3DTSS_ALPHAOP, st.m_AlphaOp);
+		g_pD3DDevice->SetTextureStageState(i, D3DTSS_ALPHAOP, st.m_AlphaOp);
 		if (st.m_AlphaOp != D3DTOP_DISABLE)
 		{
-			DAT_1005de30->SetTextureStageState(i, D3DTSS_ALPHAARG1, st.m_AlphaArg1);
-			DAT_1005de30->SetTextureStageState(i, D3DTSS_ALPHAARG2, st.m_AlphaArg2);
+			g_pD3DDevice->SetTextureStageState(i, D3DTSS_ALPHAARG1, st.m_AlphaArg1);
+			g_pD3DDevice->SetTextureStageState(i, D3DTSS_ALPHAARG2, st.m_AlphaArg2);
 		}
 	}
 }
@@ -467,12 +467,12 @@ void DrawPolyMgr::FUN_1002a0c2()
 	uint32 oldAlphaBlend, oldSrcBlend, oldDestBlend;
 
 	m_Unk768 = DAT_10056284->m_CurFrameCode;
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, (unsigned long *)&oldAlphaBlend);
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_SRCBLEND, (unsigned long *)&oldSrcBlend);
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_DESTBLEND, (unsigned long *)&oldDestBlend);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, (unsigned long *)&oldAlphaBlend);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_SRCBLEND, (unsigned long *)&oldSrcBlend);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_DESTBLEND, (unsigned long *)&oldDestBlend);
 
 	// reconfigure the built-in material for the TestGouraud / TestLightmap console variables
-	if (g_CV_TestGouraud.m_Unk00)
+	if (g_CV_TestGouraud.m_IntVal)
 	{
 		m_Passes[0].m_Unk00 = 0;
 		m_Passes[0].m_Unk14 = 0;
@@ -483,7 +483,7 @@ void DrawPolyMgr::FUN_1002a0c2()
 		m_Passes[0].m_Stages[0].m_Unk18 = 0;
 		m_Passes[0].m_Stages[0].m_Unk1c = 0;
 	}
-	else if (g_CV_TestLightmap.m_Unk00)
+	else if (g_CV_TestLightmap.m_IntVal)
 	{
 		m_nPasses = 2;
 		m_Passes[0].m_Unk00 = 0;
@@ -605,9 +605,9 @@ Next:
 		}
 	}
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, oldAlphaBlend);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, oldSrcBlend);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, oldDestBlend);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, oldAlphaBlend);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, oldSrcBlend);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, oldDestBlend);
 }
 
 // guess: TextureSrcInitFn failed for the first pass: draws the polygons of the bucket entry with the current states, untextured
@@ -650,9 +650,9 @@ void DrawPolyMgr::FUN_1002a8bc(UnkType_DPMNode *pNode)
 			pVerts[i].color = (uint32)pPoly;
 		}
 
-		DAT_10056274 = 0x3f;
+		g_ClipFlags = 0x3f;
 		if (FUN_1000af16(&pVerts, &nVerts, &g_ViewParams, 0))
-			DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
+			g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 		pLink = pLink->m_pNext;
 	} while (pLink != (LTLink *)pNode);
 }
@@ -710,7 +710,7 @@ void DrawPolyMgr::FUN_1002a40f(WorldPoly *pPoly, UnkType_DPMPass *pPass, int iNe
 		for (j = 0; j < pPass->m_nStages; j++)
 			(this->*s_BindFns[pPass->m_Stages[j].m_Unk1c])(pPoly, j, buf.m_Unk04[j]);
 
-		DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, s_FVFs[pPass->m_nStages], pVerts, buf.m_nVertices, 0);
+		g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, s_FVFs[pPass->m_nStages], pVerts, buf.m_nVertices, 0);
 
 		if (iNextPass)
 		{
@@ -812,7 +812,7 @@ void DrawPolyMgr::DrawPolyAdditionalPass(WorldPoly *pPoly, UnkType_DPMPass *pPas
 	for (j = 0; j < pPass->m_nStages; j++)
 		(this->*s_BindFns[pPass->m_Stages[j].m_Unk1c])(pPoly, j, 0);
 
-	DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, s_FVFs[pPass->m_nStages], pVerts, nVertices, 0);
+	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, s_FVFs[pPass->m_nStages], pVerts, nVertices, 0);
 
 	if (iNextPass)
 		FUN_10029ecf(pPoly, iNextPass);

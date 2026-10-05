@@ -78,7 +78,7 @@ struct UnkType_PolyLight
 #define POLY_LIGHTS(p)	(*(UnkType_PolyLight **)((uint8 *)(p) + 0x30))
 
 // GLOBAL: D3DREN 0x1005872c
-extern void (__fastcall *DAT_1005872c)(LTVector *pPos, uint32 *pSpecular);	// guess: per-vertex fog alpha hook
+extern void (__fastcall *g_pfnCalcFogAlpha)(LTVector *pPos, uint32 *pSpecular);	// guess: per-vertex fog alpha hook
 // GLOBAL: D3DREN 0x10057774
 extern uint8 DAT_10057774;		// guess: alpha byte of the poly vertex colour
 // GLOBAL: D3DREN 0x1005a004
@@ -166,7 +166,7 @@ void FUN_10007976(void)
 		while (pNode)
 		{
 			UnkType_PoolNode *pNext = pNode->m_Unk10;
-			DAT_10056274 = pNode->m_Unk0c;
+			g_ClipFlags = pNode->m_Unk0c;
 			FUN_10007b41((WorldPoly *)pNode->m_Unk00);
 			sb_Free(&DAT_10058758, pNode);
 			pNode = pNext;
@@ -176,7 +176,7 @@ void FUN_10007976(void)
 }
 
 // d3d_SetTexture is the inline of d3d_texture.h; this P object (/O1) calls it out of line from FUN_10007976, so it holds the exe's copy.
-// STUB diagnosis (W2): 162 of 165 bytes, 38 aligned mismatches.  The exe tests found/bound first (`cmp esi,[nStage*4+DAT_100617d8]; jne BIND; jmp LOD`),
+// STUB diagnosis (W2): 162 of 165 bytes, 38 aligned mismatches.  The exe tests found/bound first (`cmp esi,[nStage*4+g_pBoundTextures]; jne BIND; jmp LOD`),
 //   then the two create blocks, and shares ONE `push esi; call FUN_10007a89; pop ecx` between the found-not-bound path and both create paths; the
 //   `if (pRTexture && pRTexture == bound) {} else {...}` form is the closest source shape (38), the found-first/`||`/for-loop forms are 43-35, the
 //   permuter reached 25.
@@ -191,7 +191,7 @@ void FUN_10007a89(RTexture *pRTexture)
 {
 	UnkType_RTexView *pTex = (UnkType_RTexView *)pRTexture;
 
-	DAT_100617d8[pTex->m_Unk42] = (UnkType_TexData *)pTex;
+	g_pBoundTextures[pTex->m_Unk42] = (RTextureBase *)pTex;
 	if (pTex->m_Unk14 != g_CurFrameCode)
 	{
 		pTex->m_Unk1c.Remove();
@@ -199,9 +199,9 @@ void FUN_10007a89(RTexture *pRTexture)
 		*(int *)&g_pStruct->m_Pad48[0] += pTex->m_Unk10;	// RenderStruct+0x48: per-frame texture byte counter
 		pTex->m_Unk14 = g_CurFrameCode;
 	}
-	DAT_1005de30->SetTexture((uint8)pTex->m_Unk42, pTex->m_Unk0c);
+	g_pD3DDevice->SetTexture((uint8)pTex->m_Unk42, pTex->m_Unk0c);
 	if (pTex->m_Unk16)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHAREF, pTex->m_Unk16);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHAREF, pTex->m_Unk16);
 	DAT_10061810[pTex->m_Unk42].m_Unk00 = pTex->m_Unk04;
 	DAT_10061810[pTex->m_Unk42].m_Unk04 = pTex->m_Unk08;
 	DAT_10057794++;
@@ -242,8 +242,8 @@ void FUN_10007b41(WorldPoly *pPoly)
 	{
 		dwFogColor = FUN_10013990(DAT_10058040, DAT_10058041, DAT_10058042);
 		saved.m_Type = D3DRENDERSTATE_FOGCOLOR;
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &saved.m_Val);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGCOLOR, dwFogColor);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &saved.m_Val);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGCOLOR, dwFogColor);
 
 		{
 			UnkType_TLVertex40 *pDest = aVerts;
@@ -258,7 +258,7 @@ void FUN_10007b41(WorldPoly *pPoly)
 				pDest->rgb.g = DAT_1005a104[pSrc->m_Unk15];
 				pDest->rgb.b = DAT_1005a204[pSrc->m_Unk14];
 				pDest->rgb.a = DAT_10057774;
-				DAT_1005872c(&pDest->m_Vec, &pDest->specular);
+				g_pfnCalcFogAlpha(&pDest->m_Vec, &pDest->specular);
 				float fV = (DAT_1004ffb4 + pPos->z) * DAT_1004ebac;
 				float fU = (DAT_1004ffb0 + pPos->x) * DAT_1004eba8;
 				pDest->tu = fU;
@@ -271,7 +271,7 @@ void FUN_10007b41(WorldPoly *pPoly)
 		}
 
 		pVerts = aVerts;
-		if (!g_CV_LMDynamic.m_Unk00)
+		if (!g_CV_LMDynamic.m_IntVal)
 			FUN_100083ec(pPoly, aVerts, nVerts);
 
 		if (FUN_100085f2(&pVerts, &nVerts, &g_ViewParams, 0) &&
@@ -295,7 +295,7 @@ void FUN_10007b41(WorldPoly *pPoly)
 			DAT_10063c90.FUN_10021da6();
 			if (DAT_10055ce0->m_pTexture->m_pStateChange)
 				DAT_10063c90.FUN_10021db7(DAT_10055ce0->m_pTexture->m_pStateChange, g_NormalTextureStage);
-			DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pStore, nVerts, 0);
+			g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pStore, nVerts, 0);
 			DAT_10063c90.FUN_10021da6();
 
 			if (POLY_LIGHTS(pPoly))
@@ -304,7 +304,7 @@ void FUN_10007b41(WorldPoly *pPoly)
 			pNode = FUN_10007ddb(pPoly, &DAT_1005a308, 0);
 			pNode->m_Unk04 = DAT_100587e4;
 			pNode->m_Unk08 = nVerts;
-			pNode->m_Unk0c = DAT_10056274;
+			pNode->m_Unk0c = g_ClipFlags;
 			pNode->m_Unk14 = 3;
 			pDst = pStore;
 			pSrcVert = pVerts;
@@ -318,7 +318,7 @@ void FUN_10007b41(WorldPoly *pPoly)
 			DAT_100587e4 += nVerts;
 			DAT_100566ac++;
 		}
-		DAT_1005de30->SetRenderState(saved.m_Type, saved.m_Val);
+		g_pD3DDevice->SetRenderState(saved.m_Type, saved.m_Val);
 	}
 }
 
@@ -358,7 +358,7 @@ void FUN_100083bf(WorldPoly *pPoly)
 	UnkType_PoolNode *pNode = (UnkType_PoolNode *)sb_Allocate(&DAT_10058758);
 	if (pNode)
 	{
-		pNode->m_Unk0c = DAT_10056274;
+		pNode->m_Unk0c = g_ClipFlags;
 		pNode->m_Unk10 = DAT_1004ffb8;
 		DAT_1004ffb8 = pNode;
 		pNode->m_Unk00 = pPoly;
@@ -392,7 +392,7 @@ void __fastcall FUN_100083ae(CountAdder *pThis)
 // STUB: D3DREN 0x10007e5d
 void FUN_10007e5d(WorldPoly *pPoly, TLVertex *pVerts, int nVerts)
 {
-	if (g_CV_LMDynamic.m_Unk00)
+	if (g_CV_LMDynamic.m_IntVal)
 	{
 		CountAdder cTimer(g_pSceneDesc->m_pTicks_Render_PolyGrids);
 		struct SavedState { D3DRENDERSTATETYPE m_Type; DWORD m_Val; };
@@ -407,20 +407,20 @@ void FUN_10007e5d(WorldPoly *pPoly, TLVertex *pVerts, int nVerts)
 		SetupLMPlaneVectors((pPoly->m_Flags & 0x3800) >> 11, pPoly->m_pPlane->m_Normal, P, Q);
 
 		rsAlphaBlend.m_Type = D3DRENDERSTATE_ALPHABLENDENABLE;
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &rsAlphaBlend.m_Val);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &rsAlphaBlend.m_Val);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
 		rsSrcBlend.m_Type = D3DRENDERSTATE_SRCBLEND;
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_SRCBLEND, &rsSrcBlend.m_Val);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_SRCBLEND, &rsSrcBlend.m_Val);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
 		rsDestBlend.m_Type = D3DRENDERSTATE_DESTBLEND;
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_DESTBLEND, &rsDestBlend.m_Val);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_DESTBLEND, &rsDestBlend.m_Val);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
 		rsFogColor.m_Type = D3DRENDERSTATE_FOGCOLOR;
-		DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &rsFogColor.m_Val);
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGCOLOR, 0);
-		DAT_1005de30->GetTextureStageState(0, D3DTSS_ADDRESS, &dwOldAddress);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGCOLOR, &rsFogColor.m_Val);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGCOLOR, 0);
+		g_pD3DDevice->GetTextureStageState(0, D3DTSS_ADDRESS, &dwOldAddress);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 
 		{
 			LTMatrix mCopy = g_ViewParams.m_FullTransform;
@@ -438,7 +438,7 @@ void FUN_10007e5d(WorldPoly *pPoly, TLVertex *pVerts, int nVerts)
 				nBuild = FUN_100325e8(&setup, pPoly, pLight, 1.0f);
 				if (setup.FUN_10034c7c(nBuild) && nBuild)
 				{
-					float fScale = 1.0f / (pLight->m_pLight->GetLightRadius((uint32)pLight->m_pLight) * g_CV_LMDynamicScale.m_Unk04);
+					float fScale = 1.0f / (pLight->m_pLight->GetLightRadius((uint32)pLight->m_pLight) * g_CV_LMDynamicScale.m_FloatVal);
 					int n;
 					float *pUV = &pVerts->tu;
 
@@ -453,18 +453,18 @@ void FUN_10007e5d(WorldPoly *pPoly, TLVertex *pVerts, int nVerts)
 						pUV[1] = (Q.z * vDelta.z + Q.y * vDelta.y + Q.x * vDelta.x) * fScale + 0.5f;
 						pUV += 8;
 					}
-					DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
+					g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 				}
 			}
 		}
 
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, dwOldAddress);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, dwOldAddress);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 		d3d_SetTexture(DAT_10055ce0->m_pTexture, g_NormalTextureStage, 0);
-		DAT_1005de30->SetRenderState(rsFogColor.m_Type, rsFogColor.m_Val);
-		DAT_1005de30->SetRenderState(rsDestBlend.m_Type, rsDestBlend.m_Val);
-		DAT_1005de30->SetRenderState(rsSrcBlend.m_Type, rsSrcBlend.m_Val);
-		DAT_1005de30->SetRenderState(rsAlphaBlend.m_Type, rsAlphaBlend.m_Val);
+		g_pD3DDevice->SetRenderState(rsFogColor.m_Type, rsFogColor.m_Val);
+		g_pD3DDevice->SetRenderState(rsDestBlend.m_Type, rsDestBlend.m_Val);
+		g_pD3DDevice->SetRenderState(rsSrcBlend.m_Type, rsSrcBlend.m_Val);
+		g_pD3DDevice->SetRenderState(rsAlphaBlend.m_Type, rsAlphaBlend.m_Val);
 	}
 }
 
@@ -541,7 +541,7 @@ int FUN_100085f2(UnkType_TLVertex40 **ppVerts, int *pnVerts, void *pViewParams, 
 	UnkType_TLVertex40 *pVert;
 	int n;
 
-	if (DAT_10056274 == 0)
+	if (g_ClipFlags == 0)
 	{
 		pVert = *ppVerts;
 		for (n = *pnVerts; n; n--, pVert++)
@@ -551,12 +551,12 @@ int FUN_100085f2(UnkType_TLVertex40 **ppVerts, int *pnVerts, void *pViewParams, 
 	{
 		pVert = *ppVerts;
 		for (n = *pnVerts; n; n--, pVert++)
-			FUN_10008719(&pVert->m_Vec.x, &pView->m_Unk15c.m[0][0]);
-		if (!FUN_10008779(DAT_10056274, ppVerts, pnVerts))
+			FUN_10008719(&pVert->m_Vec.x, &pView->m_mClipTransform.m[0][0]);
+		if (!FUN_10008779(g_ClipFlags, ppVerts, pnVerts))
 			return 0;
 		pVert = *ppVerts;
 		for (n = *pnVerts; n; n--, pVert++)
-			FUN_10008895(&pVert->m_Vec.x, pView);
+			ProjectVertexToScreen(&pVert->m_Vec.x, pView);
 	}
 	return 1;
 }
@@ -581,14 +581,14 @@ int FUN_10008779(uint32 flags, UnkType_TLVertex40 **ppVerts, int *pnVerts)
 	int nVerts;
 	char bUnused0, bUnused1, bUnused2, bUnused3, bUnused4, bUnused5;
 
-	if (g_CV_UseD3DClip.m_Unk00)
+	if (g_CV_UseD3DClip.m_IntVal)
 	{
 		flags &= 1;
 		if (!flags)
 			return 1;
 	}
 
-	pOut = (UnkType_TLVertex40 *)DAT_1005627c;
+	pOut = (UnkType_TLVertex40 *)g_pClipScratchVerts;
 	pVerts = *ppVerts;
 	nVerts = *pnVerts;
 
@@ -612,16 +612,16 @@ int FUN_10008779(uint32 flags, UnkType_TLVertex40 **ppVerts, int *pnVerts)
 
 // guess: camera space -> screen space for one vertex (rhw = 1/z and the viewport scale/offset of the ViewParams).
 // FUNCTION: D3DREN 0x10008895
-void FUN_10008895(float *pVert, const void *pViewParams)
+void ProjectVertexToScreen(float *pVert, const void *pViewParams)
 {
 	float *pV = pVert;	// a local copy of the parameter (permuter: it changes the x87 term order of the y expression)
 	const ViewParams *pView = (const ViewParams *)pViewParams;
 	float rhw = 1.0f / pV[2];
 
 	pV[3] = rhw;
-	pV[0] = (pView->m_Unk31c * pV[0] + pView->m_Unk320 * pV[2]) * rhw;
-	pV[1] = (pView->m_Unk324 * pV[1] + pView->m_Unk328 * pV[2]) * rhw;
-	pV[2] = (pView->m_Unk32c * pV[2] + pView->m_Unk330) * rhw;
+	pV[0] = (pView->m_fProjXScale * pV[0] + pView->m_fProjXOffset * pV[2]) * rhw;
+	pV[1] = (pView->m_fProjYScale * pV[1] + pView->m_fProjYOffset * pV[2]) * rhw;
+	pV[2] = (pView->m_fProjZScale * pV[2] + pView->m_fProjZOffset) * rhw;
 }
 
 // guess: Jupiter polyclip.h expanded out of line for the 0x28-byte vertex: clips *ppVerts (*pnVerts vertices) against the near plane z >= g_ViewParams.m_NearZ.
@@ -789,11 +789,11 @@ float FUN_10008c6e(float *p1, float *p2, float *pOut)
 	float t;
 	float dz = p2[2] - p1[2];
 	if (dz < -CLIP_EPSILON || dz > CLIP_EPSILON)
-		t = (g_ViewParams.m_Unk90 - p1[2]) / dz;
+		t = (g_ViewParams.m_ClipFarZ - p1[2]) / dz;
 	else
 		t = 0.0f;
 	pOut[0] = (p2[0] - p1[0]) * t + p1[0];
 	pOut[1] = (p2[1] - p1[1]) * t + p1[1];
-	pOut[2] = g_ViewParams.m_Unk90;
+	pOut[2] = g_ViewParams.m_ClipFarZ;
 	return t;
 }

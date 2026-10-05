@@ -66,7 +66,7 @@ inline int d3d_SetTexture(SharedTexture *pTexture, uint32 nStage, uint32 dwMaxLO
 			break;
 	}
 
-	if (pRTexture && pRTexture == (UnkType_RTexView *)DAT_100617d8[nStage])
+	if (pRTexture && pRTexture == (UnkType_RTexView *)g_pBoundTextures[nStage])
 	{
 	}
 	else
@@ -103,10 +103,10 @@ inline int d3d_SetTexture(SharedTexture *pTexture, uint32 nStage, uint32 dwMaxLO
 // Unbinds the texture of device stage nStage.
 inline void d3d_DisableTexture(uint32 nStage)
 {
-	if (DAT_100617d8[nStage])
+	if (g_pBoundTextures[nStage])
 	{
-		DAT_1005de30->SetTexture(nStage, 0);
-		DAT_100617d8[nStage] = 0;
+		g_pD3DDevice->SetTexture(nStage, 0);
+		g_pBoundTextures[nStage] = 0;
 	}
 }
 
@@ -114,7 +114,7 @@ inline void d3d_DisableTexture(uint32 nStage)
 // extra inline call site (the inline budget of the vector operators in d3d_WarpToScreen3D and DrawModelShadows depends on it).
 inline void d3d_SetTextureDirect(IDirectDrawSurface7 *pTexture, uint32 nStage)
 {
-	DAT_1005de30->SetTexture(nStage, pTexture);
+	g_pD3DDevice->SetTexture(nStage, pTexture);
 }
 
 #endif

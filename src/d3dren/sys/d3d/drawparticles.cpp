@@ -114,7 +114,7 @@ void FUN_10008ce0(LTParticleSystem *pSystem)
 			pTexture->m_Unknown30 = DAT_100577b8;
 			if (pTexture->m_pRenderData)
 				pRTexture = (RTexture *)FUN_10009350(pTexture->m_pRenderData, (uint8)nStage);
-			if (!pRTexture || pRTexture != (RTexture *)DAT_100617d8[nStage])
+			if (!pRTexture || pRTexture != (RTexture *)g_pBoundTextures[nStage])
 			{
 				if (!pRTexture)
 				{
@@ -144,15 +144,15 @@ void FUN_10008ce0(LTParticleSystem *pSystem)
 			DAT_1004ffd0 = 0.0f;
 			DAT_1004ffd8 = 0.0f;
 			DAT_1004ffcc = 0.0f;
-			if (DAT_100617d8[nStage])
+			if (g_pBoundTextures[nStage])
 			{
-				DAT_1005de30->SetTexture(nStage, 0);
-				DAT_100617d8[nStage] = 0;
+				g_pD3DDevice->SetTexture(nStage, 0);
+				g_pBoundTextures[nStage] = 0;
 			}
 		}
 		else
 		{
-			UnkType_RTextureBase *pBase;
+			RTextureBase *pBase;
 
 			if (pRTexture->m_Unk44)
 			{
@@ -160,7 +160,7 @@ void FUN_10008ce0(LTParticleSystem *pSystem)
 				pRTexture->m_Unk44 = 0;
 			}
 			DAT_1004ffcc = DAT_10061810[0].m_Unk00 + DAT_10061810[0].m_Unk00;
-			pBase = (UnkType_RTextureBase *)DAT_100617d8[g_NormalTextureStage];
+			pBase = (RTextureBase *)g_pBoundTextures[g_NormalTextureStage];
 			DAT_1004ffd0 = ((float)(uint32)pBase->GetBaseWidth() - 2.0f) * DAT_10061810[0].m_Unk00;
 			DAT_1004ffd8 = DAT_10061810[0].m_Unk04 + DAT_10061810[0].m_Unk04;
 			DAT_100513dc = ((float)(uint32)pBase->GetBaseHeight() - 2.0f) * DAT_10061810[0].m_Unk04;
@@ -171,11 +171,11 @@ void FUN_10008ce0(LTParticleSystem *pSystem)
 
 		d3d_SetupTransformation(&pSystem->m_Pos, (float *)&pSystem->m_Rotation, &pSystem->m_Scale, &mObject);
 		if (pSystem->m_Flags & 0x40)
-			pView = &g_ViewParams.m_Unk2dc;
+			pView = &g_ViewParams.m_mReallyCloseClipTransform;
 		else
-			pView = &g_ViewParams.m_Unk15c;
+			pView = &g_ViewParams.m_mClipTransform;
 		MatMul(&mFull, pView, &mObject);
-		DAT_1005872c(&pSystem->m_Pos, (uint32 *)&DAT_1004ffd4);
+		g_pfnCalcFogAlpha(&pSystem->m_Pos, (uint32 *)&DAT_1004ffd4);
 		DAT_1004ffc0 = 1.0f / 255.0f;
 		DAT_1004ffc4 = 1.0f / 255.0f;
 		DAT_1004ffc8 = 1.0f / 255.0f;
@@ -208,7 +208,7 @@ PSParticle *FUN_10009370(LTParticleSystem *pSystem, PSParticle *pParticle, int n
 	fGreen = (float)pSystem->m_ColorG * DAT_1004ffc4;
 	fBlue = (float)pSystem->m_ColorB * DAT_1004ffc8;
 	fAlpha = (float)pSystem->m_ColorA;
-	fHalfSizeBase = (float)(g_ViewParams.m_Rect.right - g_ViewParams.m_Rect.left) * g_ViewParams.m_Unk94;
+	fHalfSizeBase = (float)(g_ViewParams.m_Rect.right - g_ViewParams.m_Rect.left) * g_ViewParams.m_fFovXScale;
 	fHalfSize = fHalfSizeBase * fSize;
 
 	if (nMode == 1 && nCount)
@@ -247,26 +247,26 @@ PSParticle *FUN_10009370(LTParticleSystem *pSystem, PSParticle *pParticle, int n
 				v0 = DAT_1004ffd8;
 				u1 = DAT_1004ffd0;
 				v1 = DAT_100513dc;
-				if (x0 < g_ViewParams.m_Unk2c)
+				if (x0 < g_ViewParams.m_fScreenMinX)
 				{
-					u0 = (DAT_1004ffd0 - DAT_1004ffcc) * ((g_ViewParams.m_Unk2c - x0) / (x1 - x0)) + DAT_1004ffcc;
-					x0 = g_ViewParams.m_Unk2c;
+					u0 = (DAT_1004ffd0 - DAT_1004ffcc) * ((g_ViewParams.m_fScreenMinX - x0) / (x1 - x0)) + DAT_1004ffcc;
+					x0 = g_ViewParams.m_fScreenMinX;
 				}
-				if (y0 < g_ViewParams.m_Unk34)
+				if (y0 < g_ViewParams.m_fScreenMinY)
 				{
-					v0 = (DAT_100513dc - DAT_1004ffd8) * ((g_ViewParams.m_Unk34 - y0) / (y1 - y0)) + DAT_1004ffd8;
-					y0 = g_ViewParams.m_Unk34;
+					v0 = (DAT_100513dc - DAT_1004ffd8) * ((g_ViewParams.m_fScreenMinY - y0) / (y1 - y0)) + DAT_1004ffd8;
+					y0 = g_ViewParams.m_fScreenMinY;
 				}
 				u1 = DAT_1004ffd0;
-				if (g_ViewParams.m_Unk30 < x1)
+				if (g_ViewParams.m_fScreenMaxX < x1)
 				{
-					u1 = (DAT_1004ffd0 - u0) * ((g_ViewParams.m_Unk30 - x0) / (x1 - x0)) + u0;
-					x1 = g_ViewParams.m_Unk30;
+					u1 = (DAT_1004ffd0 - u0) * ((g_ViewParams.m_fScreenMaxX - x0) / (x1 - x0)) + u0;
+					x1 = g_ViewParams.m_fScreenMaxX;
 				}
-				if (g_ViewParams.m_Unk38 < y1)
+				if (g_ViewParams.m_fScreenMaxY < y1)
 				{
-					v1 = (DAT_100513dc - v0) * ((g_ViewParams.m_Unk38 - y0) / (y1 - y0)) + v0;
-					y1 = g_ViewParams.m_Unk38;
+					v1 = (DAT_100513dc - v0) * ((g_ViewParams.m_fScreenMaxY - y0) / (y1 - y0)) + v0;
+					y1 = g_ViewParams.m_fScreenMaxY;
 				}
 
 				pOut[0].m_Vec.x = x0; pOut[0].m_Vec.y = y0; pOut[0].m_Vec.z = sz; pOut[0].rhw = fW; pOut[0].color = dwColor; pOut[0].specular = (uint32)DAT_1004ffd4; pOut[0].tu = u0; pOut[0].tv = v0;
@@ -283,7 +283,7 @@ PSParticle *FUN_10009370(LTParticleSystem *pSystem, PSParticle *pParticle, int n
 			int nQuads = (int)(pOut - aVerts) >> 2;
 
 			DAT_10055cd8 += nQuads;
-			DAT_1005de30->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x1c4, aVerts, (DWORD)(pOut - aVerts), DAT_1006d1b8, nQuads * 6, 0);
+			g_pD3DDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0x1c4, aVerts, (DWORD)(pOut - aVerts), DAT_1006d1b8, nQuads * 6, 0);
 		}
 	}
 	return pParticle;

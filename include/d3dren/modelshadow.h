@@ -107,11 +107,11 @@ int FUN_10026969(char *pUnused, UnkType_Vertex36 **ppVerts, int *pnVerts, UnkTyp
 int FUN_10026a9c(char *pUnused, UnkType_Vertex36 **ppVerts, int *pnVerts, UnkType_Vertex36 **ppOut);	// 0x10026a9c y == -z
 int FUN_10026bd2(char *pUnused, UnkType_Vertex36 **ppVerts, int *pnVerts, UnkType_Vertex36 **ppOut);	// 0x10026bd2 far
 
-// guess: clips the polygon against the planes selected by the bits of flags (DAT_10056274 holds 0x3f when the shadow code calls it).
+// guess: clips the polygon against the planes selected by the bits of flags (g_ClipFlags holds 0x3f when the shadow code calls it).
 // With the console variable that makes the renderer use the D3D clipper (DAT_1005c818) only bit 1 is processed.
 int FUN_100264ad(uint32 flags, UnkType_Vertex36 **ppVerts, int *pnVerts);	// 0x100264ad
 
-// guess: transforms the polygon into view space and clips it like Jupiter's polyclip, or only projects it when DAT_10056274 is 0
+// guess: transforms the polygon into view space and clips it like Jupiter's polyclip, or only projects it when g_ClipFlags is 0
 // (the vertex type counterpart of FUN_100085f2).  pViewParams is g_ViewParams (0x10055cf8).  The fourth argument is not used.
 int FUN_10026412(UnkType_Vertex36 **ppVerts, int *pnVerts, ViewParams *pViewParams, int nUnused);	// 0x10026412
 

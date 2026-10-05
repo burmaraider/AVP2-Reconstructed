@@ -192,7 +192,7 @@ int FUN_10032c40(MainWorld *pWorld, WorldPoly *pPoly, uint8 *pBits, long pitch, 
 		FUN_10032a60(pWorld, pPoly, &pNode->m_Unk08, pBits, pitch, w, h, pLight->m_LightRadius,
 			pLight->m_ColorR, pLight->m_ColorG, pLight->m_ColorB, &ctx);
 
-		if (g_CV_FastLight.m_Unk00 == 0 && !(pLight->m_Flags & 0x10) && ctx.m_Unk3c != 0)
+		if (g_CV_FastLight.m_IntVal == 0 && !(pLight->m_Flags & 0x10) && ctx.m_Unk3c != 0)
 		{
 			if (!bNot32Bit)
 			{
@@ -292,7 +292,7 @@ int FUN_10033210(MainWorld *pWorld, WorldPoly *pPoly, int bPageIn)
 	uint32 nTexels, nBytes;
 	uint32 iRef, i;
 
-	pPage = WORLDPOLY_UNK48(pPoly);
+	pPage = WORLDPOLY_LMPAGE(pPoly);
 	if (!pPage)
 		return 0;
 	if (!DAT_10062878)

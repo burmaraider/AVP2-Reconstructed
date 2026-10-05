@@ -90,18 +90,18 @@ static inline void SetUV(TLVertex *pVert, float u, float v)
 // FUNCTION: D3DREN 0x10001230
 void FUN_10001230(void)
 {
-	if (g_CV_ModelVBSize.m_Unk00 <= 1)
-		g_CV_ModelVBSize.m_Unk00 = 1;
-	if (g_CV_ModelVBCount.m_Unk00 <= 1)
-		g_CV_ModelVBCount.m_Unk00 = 1;
-	g_CV_ModelVBSize.m_Unk00 = ((g_CV_ModelVBSize.m_Unk00 + 2) / 3) * 3;
-	DAT_1004d620.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_Unk00, g_CV_ModelVBCount.m_Unk00, 0, DAT_10058494);
-	DAT_1004da80.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_Unk00, g_CV_ModelVBCount.m_Unk00, 0, DAT_10058494);
-	DAT_1004eb48.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_Unk00, g_CV_ModelVBCount.m_Unk00, 1, DAT_10058494);
-	DAT_1004dae0.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_Unk00, g_CV_ModelVBCount.m_Unk00, 1, DAT_10058494);
+	if (g_CV_ModelVBSize.m_IntVal <= 1)
+		g_CV_ModelVBSize.m_IntVal = 1;
+	if (g_CV_ModelVBCount.m_IntVal <= 1)
+		g_CV_ModelVBCount.m_IntVal = 1;
+	g_CV_ModelVBSize.m_IntVal = ((g_CV_ModelVBSize.m_IntVal + 2) / 3) * 3;
+	DAT_1004d620.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
+	DAT_1004da80.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
+	DAT_1004eb48.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
+	DAT_1004dae0.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
 	UnkType_VertexBufferPool *pCache = &UnkType_ModelVBCacheHolder::DAT_10093b10;
-	pCache->FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_Unk00, g_CV_ModelVBCache.m_Unk00, 1, DAT_10058494);
-	UnkType_ModelVBCacheHolder::DAT_10093b10.m_Unk60 = g_CV_ModelVBCacheDelay.m_Unk00;
+	pCache->FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCache.m_IntVal, 1, DAT_10058494);
+	UnkType_ModelVBCacheHolder::DAT_10093b10.m_Unk60 = g_CV_ModelVBCacheDelay.m_IntVal;
 }
 
 // guess: releases the two non-cache model pools and the cache (Term, slot 3).
@@ -125,8 +125,8 @@ void __fastcall FUN_10001390(UnkType_TLVertex40 *pDest, void *pSrc, float *pUV)
 {
 	pDest->tu = DAT_1004eb40 + pUV[0];
 	pDest->tv = DAT_1004eb44 + pUV[1];
-	pDest->tu2 = g_CV_ModelDetailTextureScale.m_Unk04 * pDest->tu;
-	pDest->tv2 = g_CV_ModelDetailTextureScale.m_Unk04 * pDest->tv;
+	pDest->tu2 = g_CV_ModelDetailTextureScale.m_FloatVal * pDest->tu;
+	pDest->tv2 = g_CV_ModelDetailTextureScale.m_FloatVal * pDest->tv;
 }
 
 // FUNCTION: D3DREN 0x100013d0
@@ -150,7 +150,7 @@ void __fastcall FUN_10001410(void *pDest, void *pSrc, float *pUV)
 }
 
 // guess: environment map coordinates from the vertex normal: u/v = (normal . row of the matrix at +0x590) * scale + offset
-// (m_Unk590 is an LTMatrix: rows 0 and 1 give u and v).
+// (m_EnvMapTransform is an LTMatrix: rows 0 and 1 give u and v).
 // Not matching (12/112 bytes; 18 before the named copy of pSrc): same 37 instructions, the x87 term order of the two sums differs.
 // The exe computes v (the second SetUV argument) first as (5a4*ny + 5a0*nx) + 5a8*nz and then u as (594*ny + 598*nz) + nx*590 (the last
 // product with swapped operands: `fld nx; fmul m590`); ours gives (5a4*ny + 5a8*nz)-first for v and `fld m590; fmul nx` for the last u
@@ -161,7 +161,7 @@ void __fastcall FUN_10001420(UnkType_ModelDrawerVertexView *pThis, UnkType_Model
 {
 	UnkType_ModelVertex *pVert = pSrc;	// the named copy changes the x87 term order: 18 -> 12 bytes (found with tools/permute.py)
 	SetUV(pDest,
-		(pThis->m_Unk590 * pVert->m_Unk14 + pThis->m_Unk598 * pVert->m_Unk1c + pThis->m_Unk594 * pVert->m_Unk18) * pThis->m_Unk624 + pThis->m_Unk61c,
+		(pThis->m_EnvMapTransform * pVert->m_Unk14 + pThis->m_Unk598 * pVert->m_Unk1c + pThis->m_Unk594 * pVert->m_Unk18) * pThis->m_Unk624 + pThis->m_Unk61c,
 		(pThis->m_Unk5a8 * pVert->m_Unk1c + pThis->m_Unk5a0 * pVert->m_Unk14 + pThis->m_Unk5a4 * pVert->m_Unk18) * pThis->m_Unk628 + pThis->m_Unk620);
 }
 
@@ -169,7 +169,7 @@ void __fastcall FUN_10001420(UnkType_ModelDrawerVertexView *pThis, UnkType_Model
 // FUNCTION: D3DREN 0x10001490
 void __fastcall FUN_10001490(UnkType_ModelDrawerVertexView *pThis, UnkType_ModelVertex *pSrc, TLVertex *pDest)
 {
-	UnkType_Vec3 vDir = pThis->m_Unk874;
+	UnkType_Vec3 vDir = pThis->m_DirLightDir;
 	float fDot = vDir.x * pSrc->m_Unk14 + vDir.y * pSrc->m_Unk18 + vDir.z * pSrc->m_Unk1c;
 
 	if (fDot > 0.0f)
@@ -201,10 +201,10 @@ float FUN_10001ac0(float *p1, float *p2, float *pOut);
 void FUN_10001940(TLVertex *pPrev, TLVertex *pCur, TLVertex *pOut, float t);
 
 // Plane clippers for the remaining planes (flag bits 8, 0x10, 0x20, 2); the first argument is unused by them.
-int FUN_100063e0(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006670(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006900(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006ba0(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyTop(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyRight(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyBottom(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyFar(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
 
 int FUN_10006e40(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
 int FUN_10007100(char *pUnused, UnkType_TLVertex40 **ppVerts, int *pnVerts, UnkType_TLVertex40 **ppOut);
@@ -219,14 +219,14 @@ extern int DAT_10094d00[56];	// guess: bInside[] of the left plane, 0x28-byte ve
 // guess: clips the polygon *ppVerts (*pnVerts vertices) against the planes selected by flags (1 near, 4 left, 8, 0x10,
 // 0x20, 2); returns 0 when nothing is left.  The result replaces *ppVerts/*pnVerts (in the scratch buffer when clipped).
 // Not matching: 62 of ~350 aligned instructions at best (permuter, 10k candidates).  Semantically complete (Jupiter
-// polyclip.h expanded twice for the near and left plane, ClipLineZ/ClipExtra called out of line, then FUN_100063e0/10006670/
+// polyclip.h expanded twice for the near and left plane, ClipLineZ/ClipExtra called out of line, then ClipPolyTop/10006670/
 // 10006900/10006ba0 for flags 8/0x10/0x20/2).  The exe keeps flags and ppVerts in spill slots [esp+0x24]/[esp+0x34], pInside/
 // nInside at [esp+0x28]/[esp+0x20] and the loop end pointer in esi; `mov eax,[g_CV]` is hoisted above the pushes.
 // STUB: D3DREN 0x10001530
 int __fastcall FUN_10001530(uint32 flags, TLVertex **ppVerts, int *pnVerts)
 {
-	TLVertex *pOut = DAT_1005627c;
-	if (g_CV_UseD3DClip.m_Unk00)	// guess: when set, only the near plane is clipped (flag bit 1)
+	TLVertex *pOut = g_pClipScratchVerts;
+	if (g_CV_UseD3DClip.m_IntVal)	// guess: when set, only the near plane is clipped (flag bit 1)
 	{
 		flags &= 1;
 		if (!flags)
@@ -328,13 +328,13 @@ int __fastcall FUN_10001530(uint32 flags, TLVertex **ppVerts, int *pnVerts)
 		}
 	}
 
-	if ((flags & 8) && !FUN_100063e0(&bUnused0, &pVerts, &nVerts, &pOut))
+	if ((flags & 8) && !ClipPolyTop(&bUnused0, &pVerts, &nVerts, &pOut))
 		return 0;
-	if ((flags & 0x10) && !FUN_10006670(&bUnused1, &pVerts, &nVerts, &pOut))
+	if ((flags & 0x10) && !ClipPolyRight(&bUnused1, &pVerts, &nVerts, &pOut))
 		return 0;
-	if ((flags & 0x20) && !FUN_10006900(&bUnused2, &pVerts, &nVerts, &pOut))
+	if ((flags & 0x20) && !ClipPolyBottom(&bUnused2, &pVerts, &nVerts, &pOut))
 		return 0;
-	if ((flags & 2) && !FUN_10006ba0(&bUnused3, &pVerts, &nVerts, &pOut))
+	if ((flags & 2) && !ClipPolyFar(&bUnused3, &pVerts, &nVerts, &pOut))
 		return 0;
 
 	*ppVerts = pVerts;
@@ -346,8 +346,8 @@ int __fastcall FUN_10001530(uint32 flags, TLVertex **ppVerts, int *pnVerts)
 // STUB: D3DREN 0x10001b30
 int __fastcall FUN_10001b30(uint32 flags, UnkType_TLVertex40 **ppVerts, int *pnVerts)
 {
-	UnkType_TLVertex40 *pOut = (UnkType_TLVertex40 *)DAT_1005627c;
-	if (g_CV_UseD3DClip.m_Unk00)	// guess: when set, only the near plane is clipped (flag bit 1)
+	UnkType_TLVertex40 *pOut = (UnkType_TLVertex40 *)g_pClipScratchVerts;
+	if (g_CV_UseD3DClip.m_IntVal)	// guess: when set, only the near plane is clipped (flag bit 1)
 	{
 		flags &= 1;
 		if (!flags)
@@ -496,7 +496,7 @@ float FUN_10001a50(float *p1, float *p2, float *pOut)
 }
 
 // guess: intersection with the plane x + z == 0 (left frustum plane); returns t.  The z of the second vertex goes through a named
-// float first (as in the bottom plane clipper FUN_10006900): that is what puts p1[0] before p1[2] in the numerator.
+// float first (as in the bottom plane clipper ClipPolyBottom): that is what puts p1[0] before p1[2] in the numerator.
 // FUNCTION: D3DREN 0x10001ac0
 float FUN_10001ac0(float *p1, float *p2, float *pOut)
 {
@@ -566,11 +566,11 @@ static inline void ProjectPos(float *pDest, float *pSrc)
 		uint32 nBytes = (char *)pOut - (char *)pp->FUN_1003a8b1(); \
 		uint32 nVertsOut = nBytes / pp->vfn_Unk18(); \
 		DAT_1005626c += nVertsOut / 3; \
-		((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, nVertsOut); \
+		((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, nVertsOut); \
 	}
 
 // The body of the two clipping callbacks.  REALLYCLOSE adds the z bias g_CV_NearZ.m_Unk04 to the w of the z row (FUN_100062e0).
-// Per triangle: the clip planes of DAT_10056274 are tested vertex by vertex (count of vertices inside: none = skip the
+// Per triangle: the clip planes of g_ClipFlags are tested vertex by vertex (count of vertices inside: none = skip the
 // triangle, not all = it has to be clipped), then the triangle is back face tested in 2D and projected.
 #define CLIPPED_CALLBACK(REALLYCLOSE) \
 	TLVertex *pOut = (TLVertex *)m_Unk608->FUN_1003a8b1(); \
@@ -594,7 +594,7 @@ static inline void ProjectPos(float *pDest, float *pSrc)
 		float *pV1 = &pVerts[pTri->m_Indices[1]].m_Vec.x; \
 		float *pV2 = &pVerts[pTri->m_Indices[2]].m_Vec.x; \
 		int nIn; \
-		if ((DAT_10056274 & 4) == 0) \
+		if ((g_ClipFlags & 4) == 0) \
 			goto TestRight; \
 		nIn = (-pV2[2] < pV2[0]) + (-pV1[2] < pV1[0]) + (-pV0[2] < pV0[0]); \
 		if (nIn == 0) \
@@ -602,7 +602,7 @@ static inline void ProjectPos(float *pDest, float *pSrc)
 		if (nIn != 3) \
 			goto Clip; \
 TestRight: \
-		if (DAT_10056274 & 0x10) \
+		if (g_ClipFlags & 0x10) \
 		{ \
 			nIn = (pV2[0] < pV2[2]) + (pV1[0] < pV1[2]) + (pV0[0] < pV0[2]); \
 			if (nIn == 0) \
@@ -610,7 +610,7 @@ TestRight: \
 			if (nIn != 3) \
 				goto Clip; \
 		} \
-		if (DAT_10056274 & 8) \
+		if (g_ClipFlags & 8) \
 		{ \
 			nIn = (pV2[1] < pV2[2]) + (pV1[1] < pV1[2]) + (pV0[1] < pV0[2]); \
 			if (nIn == 0) \
@@ -618,7 +618,7 @@ TestRight: \
 			if (nIn != 3) \
 				goto Clip; \
 		} \
-		if (DAT_10056274 & 0x20) \
+		if (g_ClipFlags & 0x20) \
 		{ \
 			nIn = (-pV2[2] < pV2[1]) + (-pV1[2] < pV1[1]) + (-pV0[2] < pV0[1]); \
 			if (nIn == 0) \
@@ -626,7 +626,7 @@ TestRight: \
 			if (nIn != 3) \
 				goto Clip; \
 		} \
-		if (DAT_10056274 & 1) \
+		if (g_ClipFlags & 1) \
 		{ \
 			nIn = (g_ViewParams.m_NearZ <= pV2[2]) + (g_ViewParams.m_NearZ <= pV1[2]) + (g_ViewParams.m_NearZ <= pV0[2]); \
 			if (nIn == 0) \
@@ -634,7 +634,7 @@ TestRight: \
 			if (nIn != 3) \
 				goto Clip; \
 		} \
-		if (DAT_10056274 & 2) \
+		if (g_ClipFlags & 2) \
 		{ \
 			nIn = (pV2[2] <= g_ViewParams.m_Unk90) + (pV1[2] <= g_ViewParams.m_Unk90) + (pV0[2] <= g_ViewParams.m_Unk90); \
 			if (nIn == 0) \
@@ -666,7 +666,7 @@ TestRight: \
 				if ((char *)pOut > pEnd && nTris > 1) \
 				{ \
 					DAT_1005626c += (m_Unk608->m_Unk20 - m_Unk608->m_Unk1c) / 3; \
-					((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c); \
+					((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c); \
 					POOL_REFILL_END(pOut, pEnd) \
 				} \
 			} \
@@ -689,7 +689,7 @@ Clip: \
 				m_Unk5f4(pD, apV[k], &pTri->m_UVs[k].tu); \
 			} \
 			int nPoly = 3; \
-			if (m_Unk600(DAT_10056274, (void **)&pPoly, &nPoly)) \
+			if (m_Unk600(g_ClipFlags, (void **)&pPoly, &nPoly)) \
 			{ \
 				int nStride = m_Unk5f8; \
 				float fX0 = (1.0f / ((float *)pPoly)[2]) * ((float *)pPoly)[0]; \
@@ -773,7 +773,7 @@ int ModelDraw::FUN_100036d0(PieceLOD *pLOD, TLVertex *pVerts)
 			uint32 nBytes = (char *)pOut - (char *)p->FUN_1003a8b1();
 			uint32 nVerts = nBytes / p->vfn_Unk18();
 			DAT_1005626c += nVerts / 3;
-			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, nVerts);
+			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, nVerts);
 			return 1;
 		}
 		TLVertex *pV0 = &pVerts[pTri->m_Indices[0]];
@@ -785,7 +785,7 @@ int ModelDraw::FUN_100036d0(PieceLOD *pLOD, TLVertex *pVerts)
 			float fY0 = (1.0f / pV0->m_Vec.z) * pV0->m_Vec.y;
 			float fCross = ((1.0f / pV2->m_Vec.z) * pV2->m_Vec.x - fX0) * ((1.0f / pV1->m_Vec.z) * pV1->m_Vec.y - fY0)
 				- ((1.0f / pV2->m_Vec.z) * pV2->m_Vec.y - fY0) * ((1.0f / pV1->m_Vec.z) * pV1->m_Vec.x - fX0);
-			if (g_ViewParams.m_Unk4cc)
+			if (g_ViewParams.m_bCullFlip)
 				fCross = -fCross;
 			if (!(0.0f < fCross))
 				goto Skip;
@@ -808,7 +808,7 @@ int ModelDraw::FUN_100036d0(PieceLOD *pLOD, TLVertex *pVerts)
 		if ((char *)pOut > pEnd && nTris > 1)
 		{
 			DAT_1005626c += (m_Unk608->m_Unk20 - m_Unk608->m_Unk1c) / 3;
-			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
+			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
 			pOut = (TLVertex *)m_Unk608->FUN_1003a8b1();
 			UnkType_VertexBufferPool *p = m_Unk608;
 			uint32 nFree2 = p->m_Unk20 - p->m_Unk1c;
@@ -839,7 +839,7 @@ int ModelDraw::FUN_10003b60(PieceLOD *pLOD, TLVertex *pVerts)
 			uint32 nBytes = (char *)pOut - (char *)p->FUN_1003a8b1();
 			uint32 nVerts = nBytes / p->vfn_Unk18();
 			DAT_1005626c += nVerts / 3;
-			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, nVerts);
+			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, nVerts);
 			return 1;
 		}
 		TLVertex *pV1 = &pVerts[pTri->m_Indices[1]];
@@ -849,9 +849,9 @@ int ModelDraw::FUN_10003b60(PieceLOD *pLOD, TLVertex *pVerts)
 		{
 			float fCross = (pV1->m_Vec.x - pV0->m_Vec.x) * (pV2->m_Vec.y - pV0->m_Vec.y)
 				- (pV2->m_Vec.x - pV0->m_Vec.x) * (pV1->m_Vec.y - pV0->m_Vec.y);
-			if (g_ViewParams.m_Unk4cc)
+			if (g_ViewParams.m_bCullFlip)
 				fCross = -fCross;
-			if (!(fCross > g_CV_ModelMinTri.m_Unk04))
+			if (!(fCross > g_CV_ModelMinTri.m_FloatVal))
 				goto Skip;
 		}
 		pOut->m_Vec = pV0->m_Vec;
@@ -875,7 +875,7 @@ int ModelDraw::FUN_10003b60(PieceLOD *pLOD, TLVertex *pVerts)
 		if ((char *)pOut > pEnd && nTris > 1)
 		{
 			DAT_1005626c += (m_Unk608->m_Unk20 - m_Unk608->m_Unk1c) / 3;
-			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
+			((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
 			pOut = (TLVertex *)m_Unk608->FUN_1003a8b1();
 			UnkType_VertexBufferPool *p = m_Unk608;
 			uint32 nFree2 = p->m_Unk20 - p->m_Unk1c;
@@ -918,9 +918,9 @@ int ModelDraw::FUN_10003e00(PieceLOD *pLOD, TLVertex *pVerts)
 			TLVertex *pV2 = &pVerts[pTri->m_Indices[2]];
 			float fCross = (pV1->m_Vec.x - pV0->m_Vec.x) * (pV2->m_Vec.y - pV0->m_Vec.y)
 				- (pV2->m_Vec.x - pV0->m_Vec.x) * (pV1->m_Vec.y - pV0->m_Vec.y);
-			if (g_ViewParams.m_Unk4cc)
+			if (g_ViewParams.m_bCullFlip)
 				fCross = -fCross;
-			if (fCross > g_CV_ModelMinTri.m_Unk04)
+			if (fCross > g_CV_ModelMinTri.m_FloatVal)
 			{
 				TLVertex *apV[3] = { pV0, pV1, pV2 };
 				for (int k = 0; k < 3; k++)
@@ -934,7 +934,7 @@ int ModelDraw::FUN_10003e00(PieceLOD *pLOD, TLVertex *pVerts)
 				if ((char *)pOut > pEnd && nTris > 1)
 				{
 					DAT_1005626c += (m_Unk608->m_Unk20 - m_Unk608->m_Unk1c) / 3;
-					((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
+					((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
 					pOut = (UnkType_TnLVertex *)m_Unk608->FUN_1003a8b1();
 					UnkType_VertexBufferPool *p = m_Unk608;
 					uint32 nFree2 = p->m_Unk20 - p->m_Unk1c;
@@ -960,7 +960,7 @@ int ModelDraw::FUN_10003e00(PieceLOD *pLOD, TLVertex *pVerts)
 			if ((char *)pOut > pEnd && nTris > 1)
 			{
 				DAT_1005626c += (m_Unk608->m_Unk20 - m_Unk608->m_Unk1c) / 3;
-				((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
+				((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, m_Unk608->m_Unk20 - m_Unk608->m_Unk1c);
 				pOut = (UnkType_TnLVertex *)m_Unk608->FUN_1003a8b1();
 				UnkType_VertexBufferPool *p = m_Unk608;
 				uint32 nFree2 = p->m_Unk20 - p->m_Unk1c;
@@ -973,7 +973,7 @@ int ModelDraw::FUN_10003e00(PieceLOD *pLOD, TLVertex *pVerts)
 	uint32 nBytes = (char *)pOut - (char *)p->FUN_1003a8b1();
 	uint32 nVerts = nBytes / p->vfn_Unk18();
 	DAT_1005626c += nVerts / 3;
-	((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, nVerts);
+	((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, nVerts);
 	return 1;
 }
 
@@ -982,7 +982,7 @@ int ModelDraw::FUN_10004230(PieceLOD *pLOD, TLVertex *pVerts)
 {
 	uint32 nIndices = pLOD->m_Tris.GetSize() * 3;
 	DAT_1005626c += nIndices / 3;
-	((UnkType_VBPoolDrawView *)m_Unk608)->Draw(DAT_1005de30, D3DPT_TRIANGLELIST, nIndices);
+	((UnkType_VBPoolDrawView *)m_Unk608)->Draw(g_pD3DDevice, D3DPT_TRIANGLELIST, nIndices);
 	return 1;
 }
 
@@ -1021,7 +1021,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 		else
 			m_Unk608 = &DAT_1004da80;
 	}
-	if (m_Unk608->m_Unk20 != g_CV_ModelVBSize.m_Unk00 || m_Unk608->m_Unk24 != g_CV_ModelVBCount.m_Unk00)
+	if (m_Unk608->m_Unk20 != g_CV_ModelVBSize.m_IntVal || m_Unk608->m_Unk24 != g_CV_ModelVBCount.m_IntVal)
 	{
 		DAT_1004d620.FUN_1003a805();
 		DAT_1004da80.FUN_1003a805();
@@ -1030,7 +1030,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 		FUN_10001230();
 	}
 	if (m_Unk8b0)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_CCW);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_CCW);
 	if (m_Unk8ac)
 	{
 		m_Unk608 = &UnkType_ModelVBCacheHolder::DAT_10093b10;
@@ -1048,7 +1048,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 	for (uint32 i = 0; i < m_pModel->m_Pieces.GetSize(); i++)
 	{
 		ModelPiece *pPiece = m_pModel->m_Pieces[i];
-		PieceLOD *pLOD = pPiece->GetLOD(m_Unk60c);
+		PieceLOD *pLOD = pPiece->GetLOD(m_nLOD);
 		if (pLOD && !(m_pInstance->m_HiddenPieces & (1 << (i & 31))) && !m_Unk2c4[i])
 		{
 			if (pPiece->m_TextureIndex != m_Unk4cc)
@@ -1064,10 +1064,10 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 			}
 			m_Unk62c = pPiece->m_SpecularPower;
 			m_Unk630 = pPiece->m_SpecularScale;
-			if (g_CV_SpecularPowerTest.m_Unk04 != 0.0f)
-				m_Unk62c = g_CV_SpecularPowerTest.m_Unk04;
-			if (g_CV_SpecularScaleTest.m_Unk04 != 0.0f)
-				m_Unk630 = g_CV_SpecularScaleTest.m_Unk04;
+			if (g_CV_SpecularPowerTest.m_FloatVal != 0.0f)
+				m_Unk62c = g_CV_SpecularPowerTest.m_FloatVal;
+			if (g_CV_SpecularScaleTest.m_FloatVal != 0.0f)
+				m_Unk630 = g_CV_SpecularScaleTest.m_FloatVal;
 			if (m_Unk630 != 0.0f && m_Unk5ec == (PFN_GenTexCoords)FUN_10001490)
 				FUN_1001e910(m_Unk62c);
 			if (!m_Unk3c4[i])
@@ -1078,7 +1078,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 		}
 	}
 	if (m_Unk8b0)
-		DAT_1005de30->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_NONE);
+		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_NONE);
 	DAT_10063c90.FUN_10021da6();
 }
 
@@ -1099,7 +1099,7 @@ void ModelDraw::FUN_100045a0(int a1)
 	{
 		pfnB = pfnA = &ModelDraw::FUN_10002050;
 	}
-	else if (DAT_10056274 & 0x3f)
+	else if (g_ClipFlags & 0x3f)
 	{
 		pfnA = &ModelDraw::FUN_100036d0;
 		pfnB = &ModelDraw::FUN_10002bc0;
@@ -1130,11 +1130,11 @@ static inline void SkinVertexInto(ModelVert *pVert, LTMatrix *pTransforms, float
 }
 
 // One loop of FUN_10004660: the exe has four copies of it (bounds on/off x LOD blend on/off); BOUNDS and BLEND are constants.
-#define MODELVERT_LOOP(BOUNDS, BLEND) 	for (; nVerts != 0; nVerts--, pVert++, pDest++) 	{ 		pDest->m_Vec.x = 0.0f; 		pDest->m_Vec.y = 0.0f; 		pDest->m_Vec.z = 0.0f; 		pDest->rhw = 0.0f; 		SkinVertexInto(pVert, pTransforms, &pDest->m_Vec.x); 		if (BLEND) 		{ 			ModelVert *pVertB = &pLOD2->m_Verts.GetArray()[pVert->m_iReplacement]; 			float vb[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; 			SkinVertexInto(pVertB, pTransforms, vb); 			pDest->m_Vec.x = (vb[0] - pDest->m_Vec.x) * m_Unk614 + pDest->m_Vec.x; 			pDest->m_Vec.y = (vb[1] - pDest->m_Vec.y) * m_Unk614 + pDest->m_Vec.y; 			pDest->m_Vec.z = (vb[2] - pDest->m_Vec.z) * m_Unk614 + pDest->m_Vec.z; 			pDest->rhw = 1.0f / ((vb[3] - pDest->rhw) * m_Unk614 + pDest->rhw); 		} 		else 			pDest->rhw = 1.0f / pDest->rhw; 		pDest->m_Vec.x = pDest->rhw * pDest->m_Vec.x; 		pDest->m_Vec.y = pDest->rhw * pDest->m_Vec.y; 		pDest->m_Vec.z = pDest->rhw * pDest->m_Vec.z; 		if (BOUNDS) 		{ 			if (pMin[0] <= pDest->m_Vec.x) { if (pMax[0] < pDest->m_Vec.x) pMax[0] = pDest->m_Vec.x; } else pMin[0] = pDest->m_Vec.x; 			if (pMin[1] <= pDest->m_Vec.y) { if (pMax[1] < pDest->m_Vec.y) pMax[1] = pDest->m_Vec.y; } else pMin[1] = pDest->m_Vec.y; 			if (pMin[2] <= pDest->m_Vec.z) { if (pMax[2] < pDest->m_Vec.z) pMax[2] = pDest->m_Vec.z; } else pMin[2] = pDest->m_Vec.z; 		} 		float fDot = fDx * pVert->m_Normal.x + fDy * pVert->m_Normal.y + fDz * pVert->m_Normal.z; 		float fR = fBaseR, fG = fBaseG, fB = fBaseB; 		if (0.0f < fDot) 		{ 			fR = (fLitR - fBaseR) * fDot + fBaseR; 			fG = (fLitG - fBaseG) * fDot + fBaseG; 			fB = (fLitB - fBaseB) * fDot + fBaseB; 		} 		UnkType_ModelLight *pLight = m_Unk3c; 		UnkType_ModelLight *pLightEnd = m_Unk3c + m_Unk2bc; 		for (; pLight != pLightEnd; pLight++) 		{ 			float fLd = pVert->m_Normal.x * pLight->m_Unk10.x + pVert->m_Normal.y * pLight->m_Unk10.y + pVert->m_Normal.z * pLight->m_Unk10.z; 			if (0.0f < fLd) 			{ 				float fDist = (pVert->m_Vec.y - pLight->m_Unk00.y) * (pVert->m_Vec.y - pLight->m_Unk00.y) 					+ (pVert->m_Vec.z - pLight->m_Unk00.z) * (pVert->m_Vec.z - pLight->m_Unk00.z) 					+ (pVert->m_Vec.x - pLight->m_Unk00.x) * (pVert->m_Vec.x - pLight->m_Unk00.x); 				if (fDist < pLight->m_Unk0c) 				{ 					fLd = (pLight->m_Unk0c - fDist) * fLd; 					fR = fLd * pLight->m_Unk1c.x + fR; 					fG = fLd * pLight->m_Unk1c.y + fG; 					fB = fLd * pLight->m_Unk1c.z + fB; 				} 			} 		} 		if (255.0f < fR) 			fR = 255.0f; 		if (255.0f < fG) 			fG = 255.0f; 		if (255.0f < fB) 			fB = 255.0f; 		pLighting[0] = fR + pLighting[0]; 		pLighting[1] = fG + pLighting[1]; 		pLighting[2] = fB + pLighting[2]; 		pDest->rgb.r = (uint8)RoundFloatToInt(fR); 		pDest->rgb.g = (uint8)RoundFloatToInt(fG); 		pDest->rgb.b = (uint8)RoundFloatToInt(fB); 		pDest->rgb.a = m_Unk8a8; 		pfn(pDest); 	}
+#define MODELVERT_LOOP(BOUNDS, BLEND) 	for (; nVerts != 0; nVerts--, pVert++, pDest++) 	{ 		pDest->m_Vec.x = 0.0f; 		pDest->m_Vec.y = 0.0f; 		pDest->m_Vec.z = 0.0f; 		pDest->rhw = 0.0f; 		SkinVertexInto(pVert, pTransforms, &pDest->m_Vec.x); 		if (BLEND) 		{ 			ModelVert *pVertB = &pLOD2->m_Verts.GetArray()[pVert->m_iReplacement]; 			float vb[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; 			SkinVertexInto(pVertB, pTransforms, vb); 			pDest->m_Vec.x = (vb[0] - pDest->m_Vec.x) * m_fLODBlend + pDest->m_Vec.x; 			pDest->m_Vec.y = (vb[1] - pDest->m_Vec.y) * m_fLODBlend + pDest->m_Vec.y; 			pDest->m_Vec.z = (vb[2] - pDest->m_Vec.z) * m_fLODBlend + pDest->m_Vec.z; 			pDest->rhw = 1.0f / ((vb[3] - pDest->rhw) * m_fLODBlend + pDest->rhw); 		} 		else 			pDest->rhw = 1.0f / pDest->rhw; 		pDest->m_Vec.x = pDest->rhw * pDest->m_Vec.x; 		pDest->m_Vec.y = pDest->rhw * pDest->m_Vec.y; 		pDest->m_Vec.z = pDest->rhw * pDest->m_Vec.z; 		if (BOUNDS) 		{ 			if (pMin[0] <= pDest->m_Vec.x) { if (pMax[0] < pDest->m_Vec.x) pMax[0] = pDest->m_Vec.x; } else pMin[0] = pDest->m_Vec.x; 			if (pMin[1] <= pDest->m_Vec.y) { if (pMax[1] < pDest->m_Vec.y) pMax[1] = pDest->m_Vec.y; } else pMin[1] = pDest->m_Vec.y; 			if (pMin[2] <= pDest->m_Vec.z) { if (pMax[2] < pDest->m_Vec.z) pMax[2] = pDest->m_Vec.z; } else pMin[2] = pDest->m_Vec.z; 		} 		float fDot = fDx * pVert->m_Normal.x + fDy * pVert->m_Normal.y + fDz * pVert->m_Normal.z; 		float fR = fBaseR, fG = fBaseG, fB = fBaseB; 		if (0.0f < fDot) 		{ 			fR = (fLitR - fBaseR) * fDot + fBaseR; 			fG = (fLitG - fBaseG) * fDot + fBaseG; 			fB = (fLitB - fBaseB) * fDot + fBaseB; 		} 		UnkType_ModelLight *pLight = m_Unk3c; 		UnkType_ModelLight *pLightEnd = m_Unk3c + m_nModelLights; 		for (; pLight != pLightEnd; pLight++) 		{ 			float fLd = pVert->m_Normal.x * pLight->m_Unk10.x + pVert->m_Normal.y * pLight->m_Unk10.y + pVert->m_Normal.z * pLight->m_Unk10.z; 			if (0.0f < fLd) 			{ 				float fDist = (pVert->m_Vec.y - pLight->m_Unk00.y) * (pVert->m_Vec.y - pLight->m_Unk00.y) 					+ (pVert->m_Vec.z - pLight->m_Unk00.z) * (pVert->m_Vec.z - pLight->m_Unk00.z) 					+ (pVert->m_Vec.x - pLight->m_Unk00.x) * (pVert->m_Vec.x - pLight->m_Unk00.x); 				if (fDist < pLight->m_Unk0c) 				{ 					fLd = (pLight->m_Unk0c - fDist) * fLd; 					fR = fLd * pLight->m_Unk1c.x + fR; 					fG = fLd * pLight->m_Unk1c.y + fG; 					fB = fLd * pLight->m_Unk1c.z + fB; 				} 			} 		} 		if (255.0f < fR) 			fR = 255.0f; 		if (255.0f < fG) 			fG = 255.0f; 		if (255.0f < fB) 			fB = 255.0f; 		pLighting[0] = fR + pLighting[0]; 		pLighting[1] = fG + pLighting[1]; 		pLighting[2] = fB + pLighting[2]; 		pDest->rgb.r = (uint8)RoundFloatToInt(fR); 		pDest->rgb.g = (uint8)RoundFloatToInt(fG); 		pDest->rgb.b = (uint8)RoundFloatToInt(fB); 		pDest->rgb.a = m_Unk8a8; 		pfn(pDest); 	}
 
 // guess: skins, lights and projects the vertices of one piece into pDest (TL vertices), calls the per-vertex generator,
 // accumulates the vertex colours into pLighting and (bBounds) the min/max of the projected positions into pMin/pMax.
-// With the LOD blend enabled (m_Unk610) every vertex is the m_Unk614 blend of the vertex of pLOD and its replacement in pLOD2.
+// With the LOD blend enabled (m_bLODBlend) every vertex is the m_fLODBlend blend of the vertex of pLOD and its replacement in pLOD2.
 // Not matching: semantically complete, four loop copies as in the exe; the exe's loop body differs in x87 term order and register
 // allocation (not yet worked on), the function was written from the Ghidra C only.
 // STUB: D3DREN 0x10004660
@@ -1142,22 +1142,22 @@ void ModelDraw::FUN_10004660(PieceLOD *pLOD, PieceLOD *pLOD2, TLVertex *pDest, v
 	float *pLighting, char bBounds, float *pMin, float *pMax)
 {
 	void (__fastcall *pfn)(TLVertex *) = (void (__fastcall *)(TLVertex *))pfnPerVertex;
-	float fScale = m_Unk880;
-	float fDx = fScale * m_Unk874.x;
-	float fDy = fScale * m_Unk874.y;
-	float fDz = fScale * m_Unk874.z;
-	float fBaseR = m_Unk850.x + m_Unk85c.x * m_Unk884.x;
-	float fBaseG = m_Unk85c.y * m_Unk884.y + m_Unk850.y;
-	float fBaseB = m_Unk85c.z * m_Unk884.z + m_Unk850.z;
-	float fLitR = m_Unk850.x + m_Unk85c.x * m_Unk868.x;
-	float fLitG = m_Unk85c.y * m_Unk868.y + m_Unk850.y;
-	float fLitB = m_Unk85c.z * m_Unk868.z + m_Unk850.z;
+	float fScale = m_DirLightAmount;
+	float fDx = fScale * m_DirLightDir.x;
+	float fDy = fScale * m_DirLightDir.y;
+	float fDz = fScale * m_DirLightDir.z;
+	float fBaseR = m_LightAdd.x + m_ObjectColor.x * m_AmbientLight.x;
+	float fBaseG = m_ObjectColor.y * m_AmbientLight.y + m_LightAdd.y;
+	float fBaseB = m_ObjectColor.z * m_AmbientLight.z + m_LightAdd.z;
+	float fLitR = m_LightAdd.x + m_ObjectColor.x * m_DirLightColor.x;
+	float fLitG = m_ObjectColor.y * m_DirLightColor.y + m_LightAdd.y;
+	float fLitB = m_ObjectColor.z * m_DirLightColor.z + m_LightAdd.z;
 	ModelVert *pVert = pLOD->m_Verts.GetArray();
 	int nVerts = pLOD->m_Verts.GetSize();
 
 	if (bBounds == 0)
 	{
-		if (m_Unk610 == 0)
+		if (m_bLODBlend == 0)
 		{
 			MODELVERT_LOOP(0, 0)
 		}
@@ -1174,7 +1174,7 @@ void ModelDraw::FUN_10004660(PieceLOD *pLOD, PieceLOD *pLOD2, TLVertex *pDest, v
 		pMax[0] = -100000.0f;
 		pMax[1] = -100000.0f;
 		pMax[2] = -100000.0f;
-		if (m_Unk610 == 0)
+		if (m_bLODBlend == 0)
 		{
 			MODELVERT_LOOP(1, 0)
 		}
@@ -1192,7 +1192,7 @@ void ModelDraw::FUN_10004660(PieceLOD *pLOD, PieceLOD *pLOD2, TLVertex *pDest, v
 void ModelDraw::FUN_10005700()
 {
 	LTMatrix *pTransforms;
-	if (DAT_10056274 == 0)
+	if (g_ClipFlags == 0)
 		pTransforms = m_Unk840;
 	else
 		pTransforms = m_pModel->m_Transforms.GetArray();
@@ -1202,16 +1202,16 @@ void ModelDraw::FUN_10005700()
 	for (uint32 i = 0; i < m_pModel->m_Pieces.GetSize(); i++)
 	{
 		ModelPiece *pPiece = m_pModel->m_Pieces[i];
-		PieceLOD *pLOD = pPiece->GetLOD(m_Unk60c);
+		PieceLOD *pLOD = pPiece->GetLOD(m_nLOD);
 		if (pLOD)
 		{
-			if (m_Unk610)
+			if (m_bLODBlend)
 			{
 				pLODB = pPiece;
-				if (m_Unk60c != 0xffffffff)
+				if (m_nLOD != 0xffffffff)
 				{
-					if (m_Unk60c < pPiece->m_LODs.GetSize())
-						pLODB = &pPiece->m_LODs[m_Unk60c];
+					if (m_nLOD < pPiece->m_LODs.GetSize())
+						pLODB = &pPiece->m_LODs[m_nLOD];
 					else
 						pLODB = 0;
 				}
@@ -1220,12 +1220,12 @@ void ModelDraw::FUN_10005700()
 			{
 				m_Unk62c = pPiece->m_SpecularPower;
 				m_Unk630 = pPiece->m_SpecularScale;
-				if (g_CV_SpecularPowerTest.m_Unk04 != 0.0f)
-					m_Unk62c = g_CV_SpecularPowerTest.m_Unk04;
-				if (g_CV_SpecularScaleTest.m_Unk04 != 0.0f)
-					m_Unk630 = g_CV_SpecularScaleTest.m_Unk04;
+				if (g_CV_SpecularPowerTest.m_FloatVal != 0.0f)
+					m_Unk62c = g_CV_SpecularPowerTest.m_FloatVal;
+				if (g_CV_SpecularScaleTest.m_FloatVal != 0.0f)
+					m_Unk630 = g_CV_SpecularScaleTest.m_FloatVal;
 				char bBounds;
-				if ((DAT_10056274 & 0x3f) == 0 || (m_pInstance->m_Flags & 0x40))
+				if ((g_ClipFlags & 0x3f) == 0 || (m_pInstance->m_Flags & 0x40))
 					bBounds = 0;
 				else
 					bBounds = 1;
@@ -1241,7 +1241,7 @@ void ModelDraw::FUN_10005700()
 						float y = (c & 2) ? vMax[1] : vMin[1];
 						float z = (c & 4) ? vMax[2] : vMin[2];
 						nNear += g_ViewParams.m_NearZ <= z;
-						nFar += z <= g_ViewParams.m_Unk90;
+						nFar += z <= g_ViewParams.m_ClipFarZ;
 						nLeft += -z < x;
 						nRight += x < z;
 						nTop += y < z;

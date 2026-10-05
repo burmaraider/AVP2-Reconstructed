@@ -39,7 +39,7 @@ extern uint32 DAT_10057828;					// DDSCAPS memory flag of the render surfaces (0
 
 // ---- Direct3D 7 objects ----------------------------------------------------------------------------------------------------
 // GLOBAL: D3DREN 0x1005de30
-extern IDirect3DDevice7 *DAT_1005de30;		// the device: BeginScene +0x14, SetRenderState +0x50, SetTexture +0x8c, SetTextureStageState +0x94, ...
+extern IDirect3DDevice7 *g_pD3DDevice;		// the device: BeginScene +0x14, SetRenderState +0x50, SetTexture +0x8c, SetTextureStageState +0x94, ...
 // GLOBAL: D3DREN 0x1005de34
 extern IDirect3D7 *DAT_1005de34;			// QueryInterface(IID_IDirect3D7) result
 // GLOBAL: D3DREN 0x1005de38

@@ -8,35 +8,19 @@
 #ifndef __D3DREN_D3DSTATE_H__
 #define __D3DREN_D3DSTATE_H__
 
-#include "d3dren/d3ddevice.h"	// the DirectDraw/Direct3D 7 globals (DAT_1005de30 = IDirect3DDevice7 *, ...) and the DX headers
+#include "d3dren/d3ddevice.h"	// the DirectDraw/Direct3D 7 globals (g_pD3DDevice = IDirect3DDevice7 *, ...) and the DX headers
 
 // GLOBAL: D3DREN 0x100528d8
 extern int DAT_100528d8;	// guess: set by FUN_100099a9 (flag read by the world polygon draw code)
 
-// guess types for the texture binding code (the texture object and its renderer data; d3dtexture.h of W8 will name them)
-struct UnkType_TexData
-{
-	uint8					m_Pad00[0x14];
-	int						m_Unk14;	// guess: size in bytes (added to the per-frame texture byte counter)
-	uint32					m_Unk18;	// guess: frame code of the last use
-	IDirectDrawSurface7		*m_Unk1c;	// guess: the texture surface
-	int						m_Unk20;	// guess: non-zero when the surface exists
-};
-
-struct UnkType_Tex
-{
-	uint8					m_Pad00[0x48];
-	UnkType_TexData			*m_Unk48;	// 0x48
-};
-
 // GLOBAL: D3DREN 0x100617d8
-extern UnkType_TexData *DAT_100617d8[8];	// guess: the texture data currently bound on each device stage
+extern RTextureBase *g_pBoundTextures[8];	// guess: the texture data currently bound on each device stage
 // GLOBAL: D3DREN 0x100577a0
 // NAME: g_CurFrameCode: Jupiter common_draw.cpp / names_proposal high (defined in sys/d3d/common_draw)
 extern uint16 g_CurFrameCode;	// the current texture frame code (RenderStruct::IncCurTextureFrameCode)
 
 // Binds the texture data of pTex on device stage nStage unless it is already there (FUN_10009ea5); returns 0 when pTex has none.
-int FUN_10009ea5(UnkType_Tex *pTex, int nStage);
+int d3d_SetLightmapTexture(WorldPoly *pTex, int nStage);
 
 // d3d_DisableTexture (d3d_texture.h): unbinds the texture of device stage nStage.  FUN_1000a27b is the exe's out-of-line copy of it, which
 // d3d_FullDrawScene calls (unit unk/100098d0 defines it as a wrapper of the inline).
@@ -61,13 +45,13 @@ public:
 	StateSet(D3DRENDERSTATETYPE state, uint32 val)
 	{
 		m_State = state;
-		DAT_1005de30->GetRenderState(state, (unsigned long *)&m_OldVal);
-		DAT_1005de30->SetRenderState(state, val);
+		g_pD3DDevice->GetRenderState(state, (unsigned long *)&m_OldVal);
+		g_pD3DDevice->SetRenderState(state, val);
 	}
 
 	~StateSet()
 	{
-		DAT_1005de30->SetRenderState(m_State, m_OldVal);
+		g_pD3DDevice->SetRenderState(m_State, m_OldVal);
 	}
 
 	D3DRENDERSTATETYPE	m_State;

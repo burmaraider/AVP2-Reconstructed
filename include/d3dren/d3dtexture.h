@@ -72,21 +72,21 @@ class RTexture;
 // The vtable and 0x1001e900 (constructor: vptr only) belong to this class; RTexture holds it as its first member and the
 // virtuals reach the rest of the RTexture through m_pOwner.  1001fff0/10021290 build one on the stack (a 0x1c byte
 // object whose vptr is wiped by the zero fill and whose members 10020fb0 copies into the new RTexture).
-class UnkType_RTextureData : public UnkType_RTextureBase
+class RTextureData : public RTextureBase
 {
 public:
-	UnkType_RTextureData() {}										// 0x1001e900 (out of line copy: vptr only)
+	RTextureData() {}										// 0x1001e900 (out of line copy: vptr only)
 
-	virtual int		FUN_vslot1();									// 0x1001e6f0: returns 1
-	virtual int		IsFullbrite();									// 0x1001e700
-	virtual int		GetBaseWidth();									// 0x1001e710
-	virtual int		GetBaseHeight();								// 0x1001e720
+	virtual int		IsRTexture();							// 0x1001e6f0: returns 1
+	virtual int		IsFullbrite();							// 0x1001e700
+	virtual int		GetBaseWidth();							// 0x1001e710
+	virtual int		GetBaseHeight();						// 0x1001e720
 
-	float				m_Unk04;			// 0x04 1/width of the texture (u multiplier)
-	float				m_Unk08;			// 0x08 1/height (v multiplier)
+	float				m_fUScale;			// 0x04 1/width of the texture (u multiplier)
+	float				m_fVScale;			// 0x08 1/height (v multiplier)
 	IDirectDrawSurface7	*m_pSurface;		// 0x0c
 	int					m_nMemory;			// 0x10 bytes of texture memory (RenderStruct+0x50 total, +0x48 per frame counter)
-	uint16				m_nTextureFrameCode;	// 0x14 frame code of the last use
+	uint16				m_nTextureFrameCode;// 0x14 frame code of the last use
 	uint16				m_AlphaRef;			// 0x16 alpha reference (0 = none)
 	RTexture			*m_pOwner;			// 0x18 the RTexture holding this object (the RTexture itself for the embedded one)
 };
@@ -100,11 +100,11 @@ public:
 	// vtable 0x10046390): slot 2 of it, called through the pointer (virtual dispatch), as the callers in the drawing code do.
 	int IsFullbrite()
 	{
-		UnkType_RTextureData *pData = &m_Data;
+		RTextureData *pData = &m_Data;
 		return pData->IsFullbrite();
 	}
 
-	UnkType_RTextureData	m_Data;				// 0x00 vtable 0x10046390 + surface etc.
+	RTextureData	m_Data;				// 0x00 vtable 0x10046390 + surface etc.
 	LTLink					m_Link;				// 0x1c in g_Textures (0x10062868)
 	uint16					m_BaseWidth;		// 0x28 first usable mipmap width
 	uint16					m_BaseHeight;		// 0x2a

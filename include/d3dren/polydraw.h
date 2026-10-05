@@ -28,7 +28,7 @@
 extern MainWorld *DAT_10056770;			// guess: g_pMainWorld (m_LMGridSize at +0xf8 is the lightmap grid spacing)
 
 // GLOBAL: D3DREN 0x1005872c
-extern void (__fastcall *DAT_1005872c)(LTVector *pPos, uint32 *pSpecular);	// guess: per-vertex fog alpha hook (the vertex position and its specular colour)
+extern void (__fastcall *g_pfnCalcFogAlpha)(LTVector *pPos, uint32 *pSpecular);	// guess: per-vertex fog alpha hook (the vertex position and its specular colour)
 // GLOBAL: D3DREN 0x10058c40
 extern void (__fastcall *DAT_10058c40)(LTVector *pPos, uint32 *pSpecular);	// guess: the sky's per-vertex fog hook (same signature; added by W6: d3d_drawsky and drawpolymgr use it)
 // GLOBAL: D3DREN 0x100566bc
@@ -91,7 +91,7 @@ int FUN_10020ff0(WorldPoly *pPoly, int bFirst);
 //   +0x04 the next page in the list of pages that have polys waiting (DAT_100528d4)
 //   +0x08 the polys waiting for this page (nodes of the pool at 0x10058758, linked through m_Unk10)
 //   +0x20 non-zero once the page has been set up by the first draw
-#define LMPAGE_NEXT(p)		(*(UnkType_LMPage **)&(p)->m_Unk04)
+#define LMPAGE_NEXT(p)		(*(LightmapPage **)&(p)->m_Unk04)
 #define LMPAGE_QUEUE(p)		(*(UnkType_PoolNode **)&(p)->m_Unk08)
 // WorldPoly +0x30: non-zero when the poly has a lightmap to draw with (engine pad m_Pad30).
 #define WORLDPOLY_UNK30(p)	(*(void **)((uint8 *)(p) + 0x30))
@@ -104,7 +104,7 @@ extern UnkType_Pool DAT_10058c98;
 // GLOBAL: D3DREN 0x1005a308
 extern UnkType_PoolBucket *DAT_1005a308;	// guess: list of buckets (polys queued per texture, linked through m_Unk08)
 // GLOBAL: D3DREN 0x100528d4
-extern UnkType_LMPage *DAT_100528d4;	// guess: lightmap pages with polys waiting to be drawn (linked through LMPAGE_NEXT)
+extern LightmapPage *DAT_100528d4;	// guess: lightmap pages with polys waiting to be drawn (linked through LMPAGE_NEXT)
 
 // A vertex of a world polygon (SPolyVertex of de_objects.h, same layout) with the members the engine header leaves in padding
 // named at their offsets: 0x0c/0x10 are the lightmap texture coordinates.  (lightmap.h's SPOLYVERTEX_UNK0C macros compile to
@@ -128,10 +128,10 @@ float FUN_10001a50(float *p1, float *p2, float *pOut);
 float FUN_10001ac0(float *p1, float *p2, float *pOut);
 void FUN_10001940(TLVertex *pPrev, TLVertex *pCur, TLVertex *pOut, float t);
 // Plane clippers for the flag bits 8, 0x10, 0x20, 2 (unit unk/10001000); the first argument is unused.
-int FUN_100063e0(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006670(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006900(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_10006ba0(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyTop(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyRight(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyBottom(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyFar(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
 
 // ---- the functions of this unit (0x100099b9-0x1000b20c) --------------------------------------------------------------------------
 void FUN_100099b9(WorldPoly *pPoly);
@@ -150,8 +150,8 @@ void FUN_1000ac8a(void);
 void FUN_1000ad48(TLVertex *pVerts, int nVerts, ViewParams *pParams, uint32 nFVF);
 void FUN_1000ae2f(UnkType_TLVertex40 *pVerts, int nVerts, ViewParams *pParams, uint32 nFVF);
 int FUN_1000af16(TLVertex **ppVerts, int *pnVerts, ViewParams *pParams, int param_4);
-int FUN_1000afb1(uint32 nFlags, TLVertex **ppVerts, int *pnVerts);
-int FUN_1000b0cd(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
-int FUN_1000b20c(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPoly(uint32 nFlags, TLVertex **ppVerts, int *pnVerts);
+int ClipPolyNear(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
+int ClipPolyLeft(char *pUnused, TLVertex **ppVerts, int *pnVerts, TLVertex **ppOut);
 
 #endif

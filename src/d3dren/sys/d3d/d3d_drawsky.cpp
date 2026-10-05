@@ -123,11 +123,11 @@ void FUN_10019351(WorldPoly *pPoly)
 	uint32 n = (uint32)nVerts;
 	while (n--)
 	{
-		FUN_10008719((float *)pDest, &g_SkyParams.m_Unk15c.m[0][0]);
+		FUN_10008719((float *)pDest, &g_SkyParams.m_mClipTransform.m[0][0]);
 		pDest++;
 	}
 
-	if (FUN_1000afb1(0x3f, &pVerts, &nVerts))
+	if (ClipPoly(0x3f, &pVerts, &nVerts))
 	{
 		SharedTexture *pTexture;
 		if (DAT_10058038 || !(pTexture = ((Surface *)pPoly->m_pSurface)->m_pTexture) || !d3d_SetTexture(pTexture, g_NormalTextureStage, 0))
@@ -137,7 +137,7 @@ void FUN_10019351(WorldPoly *pPoly)
 		for (int n = nVerts; n != 0; n--)
 		{
 			DAT_10058c40(&pDest->m_Vec, &pDest->specular);
-			FUN_10008895((float *)pDest, &g_SkyParams);
+			ProjectVertexToScreen((float *)pDest, &g_SkyParams);
 			float fV = pDest->tv;
 			fV *= DAT_10061810[0].m_Unk04;
 			float fU = pDest->tu;
@@ -150,7 +150,7 @@ void FUN_10019351(WorldPoly *pPoly)
 		pTexture = ((Surface *)pPoly->m_pSurface)->m_pTexture;
 		if (pTexture && pTexture->m_pStateChange)
 			DAT_10063c90.FUN_10021db7(pTexture->m_pStateChange, 1);
-		DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
+		g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x1c4, pVerts, nVerts, 0);
 		DAT_10063c90.FUN_10021da6();
 	}
 }
@@ -231,8 +231,8 @@ void d3d_DrawSkyObjects()
 	saver.FUN_10021e28(RenderState(D3DRENDERSTATE_FOGEND, *(DWORD *)&DAT_10057d40));
 	saver.FUN_10021dfd(TextureState(1, D3DTSS_COLOROP, D3DTOP_DISABLE), 1);
 
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, &oldFogEnable);
-	DAT_1005de30->GetTextureStageState(1, D3DTSS_COLOROP, &oldColorOp);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, &oldFogEnable);
+	g_pD3DDevice->GetTextureStageState(1, D3DTSS_COLOROP, &oldColorOp);
 
 	for (int i = 0; i < g_pSceneDesc->m_nSkyObjects; i++)
 	{

@@ -61,7 +61,7 @@ void UnkType_StateRestorer::FUN_10021db7(StateChange *pChange, uint32 nStage)
 void UnkType_StateRestorer::FUN_10021dfd(const TextureState &state, uint32 nStage)
 {
 	FUN_10021e80(state, nStage);
-	DAT_1005de30->SetTextureStageState(nStage, state.m_TextureStateType, state.m_TextureState);
+	g_pD3DDevice->SetTextureStageState(nStage, state.m_TextureStateType, state.m_TextureState);
 }
 #pragma auto_inline(on)
 
@@ -70,7 +70,7 @@ void UnkType_StateRestorer::FUN_10021dfd(const TextureState &state, uint32 nStag
 void UnkType_StateRestorer::FUN_10021e28(const RenderState &state)
 {
 	FUN_10021e47(state);
-	DAT_1005de30->SetRenderState(state.m_RenderStateType, state.m_RenderState);
+	g_pD3DDevice->SetRenderState(state.m_RenderStateType, state.m_RenderState);
 }
 #pragma auto_inline(on)
 
@@ -78,7 +78,7 @@ void UnkType_StateRestorer::FUN_10021e28(const RenderState &state)
 void UnkType_StateRestorer::FUN_10021e47(const RenderState &state)
 {
 	DWORD dwOld;
-	DAT_1005de30->GetRenderState(state.m_RenderStateType, &dwOld);
+	g_pD3DDevice->GetRenderState(state.m_RenderStateType, &dwOld);
 	m_Unk00.push_back(RenderState(state.m_RenderStateType, dwOld));
 }
 
@@ -86,19 +86,19 @@ void UnkType_StateRestorer::FUN_10021e47(const RenderState &state)
 void UnkType_StateRestorer::FUN_10021e80(const TextureState &state, uint32 nStage)
 {
 	DWORD dwOld;
-	DAT_1005de30->GetTextureStageState(nStage, state.m_TextureStateType, &dwOld);
+	g_pD3DDevice->GetTextureStageState(nStage, state.m_TextureStateType, &dwOld);
 	m_Unk0c.push_back(TextureState(nStage, state.m_TextureStateType, dwOld));
 }
 
 // FUNCTION: D3DREN 0x10021ec9
 void UnkType_StateRestorer::FUN_10021ec9()
 {
-	if (DAT_1005de30)
+	if (g_pD3DDevice)
 	{
 		std::vector<RenderState>::iterator it;
 		std::vector<RenderState>::iterator itEnd = m_Unk00.end();
 		for (it = m_Unk00.begin(); it != itEnd; ++it)
-			DAT_1005de30->SetRenderState(it->m_RenderStateType, it->m_RenderState);
+			g_pD3DDevice->SetRenderState(it->m_RenderStateType, it->m_RenderState);
 		m_Unk00.clear();
 	}
 }
@@ -106,12 +106,12 @@ void UnkType_StateRestorer::FUN_10021ec9()
 // FUNCTION: D3DREN 0x10021f09
 void UnkType_StateRestorer::FUN_10021f09()
 {
-	if (DAT_1005de30)
+	if (g_pD3DDevice)
 	{
 		std::vector<TextureState>::iterator it;
 		std::vector<TextureState>::iterator itEnd = m_Unk0c.end();
 		for (it = m_Unk0c.begin(); it != itEnd; ++it)
-			DAT_1005de30->SetTextureStageState(it->m_Stage, it->m_TextureStateType, it->m_TextureState);
+			g_pD3DDevice->SetTextureStageState(it->m_Stage, it->m_TextureStateType, it->m_TextureState);
 		m_Unk0c.clear();
 	}
 }

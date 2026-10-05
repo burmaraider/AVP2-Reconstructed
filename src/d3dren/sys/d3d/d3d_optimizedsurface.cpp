@@ -389,31 +389,31 @@ LTBOOL d3d_OptimizeSurface(HLTBUFFER hBuffer, PValue transparentColor)
 // FUNCTION: D3DREN 0x1001c627
 LTBOOL d3d_StartOptimized2D()
 {
-	if (!DAT_1005de30 || !DAT_1005de40)
+	if (!g_pD3DDevice || !DAT_1005de40)
 		return LTFALSE;
 	if (g_bInOptimized2D)
 		return LTTRUE;
 
 	// Set states...
-	DAT_1005de30->GetRenderState(D3DRENDERSTATE_FOGENABLE, (DWORD *)&g_OldFogEnable);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, FALSE);
+	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, (DWORD *)&g_OldFogEnable);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, FALSE);
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, FALSE);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, FALSE);
 
 	if (!DAT_10058118 && DAT_1005782c)
 	{
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTFN_POINT);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTFG_POINT);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MIPFILTER, D3DTFP_POINT);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTFN_POINT);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTFG_POINT);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MIPFILTER, D3DTFP_POINT);
 	}
 
 	FUN_100139f0();
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 
 	g_bInOptimized2D = TRUE;
 	return TRUE;
@@ -423,24 +423,24 @@ LTBOOL d3d_StartOptimized2D()
 // FUNCTION: D3DREN 0x1001c725
 void d3d_EndOptimized2D()
 {
-	if (!DAT_1005de30 || !DAT_1005de40)
+	if (!g_pD3DDevice || !DAT_1005de40)
 		return;
 	if (!g_bInOptimized2D)
 		return;
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZENABLE, TRUE);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, TRUE);
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_FOGENABLE, g_OldFogEnable);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, TRUE);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, TRUE);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, g_OldFogEnable);
 
 	if (!DAT_10058118 && DAT_1005782c)
 	{
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTFN_LINEAR);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTFG_LINEAR);
-		DAT_1005de30->SetTextureStageState(0, D3DTSS_MIPFILTER, D3DTFP_POINT);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTFN_LINEAR);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTFG_LINEAR);
+		g_pD3DDevice->SetTextureStageState(0, D3DTSS_MIPFILTER, D3DTFP_POINT);
 	}
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-	DAT_1005de30->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
+	g_pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 
 	g_bInOptimized2D = FALSE;
 }
@@ -462,44 +462,44 @@ LTBOOL d3d_SetOptimized2DBlend(LTSurfaceBlend blend)
 	{
 		case LTSURFACEBLEND_ALPHA:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
 			break;
 		}
 		case LTSURFACEBLEND_SOLID:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
 			break;
 		}
 		case LTSURFACEBLEND_ADD:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
 			break;
 		}
 		case LTSURFACEBLEND_MULTIPLY:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_DESTCOLOR);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_DESTCOLOR);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
 			break;
 		}
 		case LTSURFACEBLEND_MULTIPLY2:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_DESTCOLOR);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_SRCCOLOR);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_DESTCOLOR);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_SRCCOLOR);
 			break;
 		}
 		case LTSURFACEBLEND_MASK:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ZERO);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ZERO);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCCOLOR);
 			break;
 		}
 		case LTSURFACEBLEND_MASKADD:
 		{
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-			DAT_1005de30->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
+			g_pD3DDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCCOLOR);
 			break;
 		}
 		default:
@@ -561,7 +561,7 @@ void d3d_BlitToScreen3D(BlitRequest *pRequest)
 	if (!pTiles)
 		return;
 
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, g_Optimized2DBlend != LTSURFACEBLEND_SOLID);
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, g_Optimized2DBlend != LTSURFACEBLEND_SOLID);
 
 	LTRect *pSrcRect = pRequest->m_pSrcRect;
 	LTRect *pDestRect = pRequest->m_pDestRect;
@@ -578,7 +578,7 @@ void d3d_BlitToScreen3D(BlitRequest *pRequest)
 
 	// Remember the previous texture in there.
 	IDirectDrawSurface7 *pOldTexture = NULL;
-	DAT_1005de30->GetTexture(0, &pOldTexture);
+	g_pD3DDevice->GetTexture(0, &pOldTexture);
 
 	// Draw each tile.
 	int x, y, nextX, nextY;
@@ -627,14 +627,14 @@ void d3d_BlitToScreen3D(BlitRequest *pRequest)
 			SetTCoords(&verts[2], tDestRight, tDestBottom);
 			SetTCoords(&verts[3], tDestLeft, tDestBottom);
 
-			DAT_1005de30->SetTexture(0, pTile->m_pTexture);
-			DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, D3DFVF_TLVERTEX, verts, 4, 0);
+			g_pD3DDevice->SetTexture(0, pTile->m_pTexture);
+			g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, D3DFVF_TLVERTEX, verts, 4, 0);
 		}
 
 		x = nextX;
 	} while (x < pSrcRect->right);
 
-	DAT_1005de30->SetTexture(0, pOldTexture);
+	g_pD3DDevice->SetTexture(0, pOldTexture);
 	InvalidateRect(pDestRect);
 }
 
@@ -662,10 +662,10 @@ void d3d_WarpToScreen3D(BlitRequest *pRequest)
 	float srcRectHeight = (float)(pRequest->m_pSrcRect->bottom - pRequest->m_pSrcRect->top);
 
 	// Set the rendering device to allow for translucency
-	DAT_1005de30->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, pRSurface->m_bTilesTransparent || (pRequest->m_Alpha != 1.0f));
+	g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, pRSurface->m_bTilesTransparent || (pRequest->m_Alpha != 1.0f));
 
 	// Remember the previous texture so we can reset it at the end
-	DAT_1005de30->GetTexture(0, &pOldTexture);
+	g_pD3DDevice->GetTexture(0, &pOldTexture);
 
 	// Set all of the verticies to the same default values for color, alpha, and rhw
 	TLVertex verts[12];
@@ -713,7 +713,7 @@ void d3d_WarpToScreen3D(BlitRequest *pRequest)
 
 			// Set the texture to the correct tile, and draw it using the verticies
 			d3d_SetTextureDirect(pTile->m_pTexture, 0);
-			DAT_1005de30->DrawPrimitive(D3DPT_TRIANGLEFAN, D3DFVF_TLVERTEX, verts, 4, 0);
+			g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, D3DFVF_TLVERTEX, verts, 4, 0);
 
 			// Increment the X position
 			xPos += pTile->m_nTileWidth;
@@ -724,7 +724,7 @@ void d3d_WarpToScreen3D(BlitRequest *pRequest)
 	}
 
 	// Reset our texture to the one that was loaded before we entered this function
-	DAT_1005de30->SetTexture(0, pOldTexture);
+	g_pD3DDevice->SetTexture(0, pOldTexture);
 }
 
 // d3d_optimizedsurface (another part of this unit)

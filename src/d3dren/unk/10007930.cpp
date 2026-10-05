@@ -28,7 +28,7 @@
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 // GLOBAL: D3DREN 0x10055ce0
-extern RenderStruct::RSTextureRef *DAT_10055ce0;	// guess: &RenderStruct::m_TextureRefs[n] (NAMING.md: "+110 m_TextureRefs (DAT_10055ce0 = &it)")
+extern GlobalPanInfo *DAT_10055ce0;	// &RenderStruct::m_GlobalPans[n] (the current global pan texture)
 
 // Per-stage texture coordinate scale pair (u, v), indexed by the device stage.
 struct UnkType_StageUV
@@ -146,10 +146,10 @@ void FUN_10007930(void)
 {
 	if (DAT_10055ce0)
 	{
-		DAT_1004eba8 = (1.0f / DAT_10055ce0->m_Unk0c) * DAT_10061810[DAT_1005c838].m_Unk00;
-		DAT_1004ebac = (1.0f / DAT_10055ce0->m_Unk10) * DAT_10061810[DAT_1005c838].m_Unk04;
-		DAT_1004ffb0 = DAT_10055ce0->m_Unk04;
-		DAT_1004ffb4 = DAT_10055ce0->m_Unk08;
+		DAT_1004eba8 = (1.0f / DAT_10055ce0->m_xScale) * DAT_10061810[DAT_1005c838].m_Unk00;
+		DAT_1004ebac = (1.0f / DAT_10055ce0->m_zScale) * DAT_10061810[DAT_1005c838].m_Unk04;
+		DAT_1004ffb0 = DAT_10055ce0->m_xOffset;
+		DAT_1004ffb4 = DAT_10055ce0->m_zOffset;
 	}
 }
 

@@ -37,9 +37,9 @@ extern float DAT_1004eba8;
 extern float DAT_1004ebac;
 // GLOBAL: D3DREN 0x10057774
 extern uint8 DAT_10057774;		// guess: alpha byte of the vertex colours
-// The current texture reference: [0] SharedTexture*, [4]/[8] texture offset, [0xc]/[0x10] texture size (RenderStruct::RSTextureRef).
+// The current texture reference: [0] SharedTexture*, [4]/[8] texture offset, [0xc]/[0x10] texture size (GlobalPanInfo, RenderStruct::m_GlobalPans).
 // GLOBAL: D3DREN 0x10055ce0
-extern RenderStruct::RSTextureRef *DAT_10055ce0;	// guess: &RenderStruct::m_TextureRefs[n]
+extern GlobalPanInfo *DAT_10055ce0;	// &RenderStruct::m_GlobalPans[n]
 
 // callbacks of FUN_10035629 (one queued poly each); they return non-zero when they drew something
 int FUN_10035071(WorldPoly *pPoly);

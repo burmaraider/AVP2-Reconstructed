@@ -393,10 +393,10 @@ void cm_TagUsedTextures(CClientMgr *pClientMgr)
 	// Tag the textures the renderer holds.
 	if (r_IsRenderInitted())
 	{
-		TagTexture(g_Render.m_pTexture10C);
+		TagTexture(g_Render.m_pEnvMapTexture);
 		for (i=0; i < 2; i++)
 		{
-			TagTexture(g_Render.m_TextureRefs[i].m_pTexture);
+			TagTexture(g_Render.m_GlobalPans[i].m_pTexture);
 		}
 	}
 }

@@ -242,7 +242,7 @@ IDirectDrawSurface7 *d3d_CreateTextureFromPixels(uint32 *pPixels, uint32 width, 
 		ddsd.dwWidth = width;
 		ddsd.dwHeight = height;
 		ddsd.ddpfPixelFormat = pFormat->m_DDPF;
-		if (g_pDD->CreateSurface(&ddsd, &pSurface, 0) == 0)
+		if (DAT_10057810->CreateSurface(&ddsd, &pSurface, 0) == 0)
 		{
 			memset(&ddsdLock, 0, sizeof(ddsdLock));
 			ddsdLock.dwSize = sizeof(ddsdLock);
@@ -251,7 +251,7 @@ IDirectDrawSurface7 *d3d_CreateTextureFromPixels(uint32 *pPixels, uint32 width, 
 				cRequest.m_pSrcFormat->InitPValueFormat();
 				cRequest.m_pSrc = (uint8 *)pPixels;
 				cRequest.m_SrcPitch = pitch;
-				DDPFToPFormat(&pFormat->m_DDPF, cRequest.m_pDestFormat);
+				DDPFToPFormat(&pFormat->m_PF, cRequest.m_pDestFormat);
 				cRequest.m_pDest = (uint8 *)ddsdLock.lpSurface;
 				cRequest.m_DestPitch = ddsdLock.lPitch;
 				cRequest.m_Width = width;
@@ -295,13 +295,13 @@ void d3d_ReinitLightmapTextureSupport()
 		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
 		ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 		ddsd.ddpfPixelFormat = pFormat->m_DDPF;
-		g_pDD->CreateSurface(&ddsd, &DAT_10062878, 0);
+		DAT_10057810->CreateSurface(&ddsd, &DAT_10062878, 0);
 	}
 }
 
 // Texture manager Init: clears the tables and lists, creates the RTexture bank, enumerates the device's texture formats and picks one for
 // every FORMAT_* use; prints "FORMAT_x texture format missing." and fails when a required one is missing.  (The Jupiter CTextureManager::
-// Init + SelectTextureFormats; the lightmap texture support reset of FUN_1001eb80 is inlined at its end.)
+// Init + SelectTextureFormats; the lightmap texture support reset of d3d_ReinitLightmapTextureSupport is inlined at its end.)
 // NAME: names_proposal.csv CTextureManager::Init (medium, Jupiter): a global function in d3d.ren
 // NOT MATCHING (1216 vs 1152 bytes): all seven wanted-format tables are initialized before selection, and FUN_1001f600 is kept
 // out of line as in the exe.  The remaining difference is register and stack-slot selection: the exe reuses table storage for
@@ -393,7 +393,7 @@ int FUN_1001ec50()
 			ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
 			ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 			ddsd.ddpfPixelFormat = pLightmapFormat->m_DDPF;
-			g_pDD->CreateSurface(&ddsd, &DAT_10062878, 0);
+			DAT_10057810->CreateSurface(&ddsd, &DAT_10062878, 0);
 		}
 	}
 	FUN_10032a30();
@@ -467,42 +467,42 @@ HRESULT WINAPI FUN_1001f0d0(LPDDPIXELFORMAT pFormat, LPVOID pContext)
 	TextureFormat *pNode = (TextureFormat *)dalloc(sizeof(TextureFormat));
 	if (pNode)
 	{
-		pNode->m_DDPF = *pFormat;
-		if (pNode->m_DDPF.dwFlags & DDPF_PALETTEINDEXED8)
+		pNode->m_PF = *pFormat;
+		if (pNode->m_PF.dwFlags & DDPF_PALETTEINDEXED8)
 		{
-			pNode->m_nBytesPP = 0;
+			pNode->m_BytesPPShift = 0;
 		}
 		else
 		{
-			if (pNode->m_DDPF.dwRGBBitCount == 16)
-				pNode->m_nBytesPP = 1;
-			else if (pNode->m_DDPF.dwRGBBitCount == 32)
-				pNode->m_nBytesPP = 2;
+			if (pNode->m_PF.dwRGBBitCount == 16)
+				pNode->m_BytesPPShift = 1;
+			else if (pNode->m_PF.dwRGBBitCount == 32)
+				pNode->m_BytesPPShift = 2;
 		}
-		pNode->m_Unk30 = 1 << pNode->m_nBytesPP;
-		pNode->m_Unk34 = (uint16)FUN_10012edf(pFormat->dwRBitMask);
-		pNode->m_Unk38 = (uint16)FUN_10012edf(pFormat->dwGBitMask);
-		pNode->m_Unk3c = (uint16)FUN_10012edf(pFormat->dwBBitMask);
-		pNode->m_Unk40 = (uint16)FUN_10012edf(pFormat->dwRGBAlphaBitMask);
+		pNode->m_BytesPP = 1 << pNode->m_BytesPPShift;
+		pNode->m_RBits = (uint16)FUN_10012edf(pFormat->dwRBitMask);
+		pNode->m_GBits = (uint16)FUN_10012edf(pFormat->dwGBitMask);
+		pNode->m_BBits = (uint16)FUN_10012edf(pFormat->dwBBitMask);
+		pNode->m_ABits = (uint16)FUN_10012edf(pFormat->dwRGBAlphaBitMask);
 
-		FUN_CalcShift(0xff, pFormat->dwRBitMask, &pNode->m_Unk44[0], &pNode->m_Unk44[1]);
-		FUN_CalcShift(0xff, pFormat->dwGBitMask, &pNode->m_Unk44[2], &pNode->m_Unk44[3]);
-		FUN_CalcShift(0xff, pFormat->dwBBitMask, &pNode->m_Unk44[4], &pNode->m_Unk44[5]);
-		FUN_CalcShift(0xff, pFormat->dwRGBAlphaBitMask, &pNode->m_Unk44[6], &pNode->m_Unk44[7]);
-		FUN_CalcShift(0xf800, pFormat->dwRBitMask, &pNode->m_Unk44[8], &pNode->m_Unk44[9]);
-		FUN_CalcShift(0x7e0, pFormat->dwGBitMask, &pNode->m_Unk44[10], &pNode->m_Unk44[11]);
-		FUN_CalcShift(0x1f, pFormat->dwBBitMask, &pNode->m_Unk44[12], &pNode->m_Unk44[13]);
-		FUN_CalcShift(0x7c00, pFormat->dwRBitMask, &pNode->m_Unk44[14], &pNode->m_Unk44[15]);
-		FUN_CalcShift(0x3e0, pFormat->dwGBitMask, &pNode->m_Unk44[16], &pNode->m_Unk44[17]);
-		FUN_CalcShift(0x1f, pFormat->dwBBitMask, &pNode->m_Unk44[18], &pNode->m_Unk44[19]);
+		FUN_CalcShift(0xff, pFormat->dwRBitMask, &pNode->m_Shifts[0], &pNode->m_Shifts[1]);
+		FUN_CalcShift(0xff, pFormat->dwGBitMask, &pNode->m_Shifts[2], &pNode->m_Shifts[3]);
+		FUN_CalcShift(0xff, pFormat->dwBBitMask, &pNode->m_Shifts[4], &pNode->m_Shifts[5]);
+		FUN_CalcShift(0xff, pFormat->dwRGBAlphaBitMask, &pNode->m_Shifts[6], &pNode->m_Shifts[7]);
+		FUN_CalcShift(0xf800, pFormat->dwRBitMask, &pNode->m_Shifts[8], &pNode->m_Shifts[9]);
+		FUN_CalcShift(0x7e0, pFormat->dwGBitMask, &pNode->m_Shifts[10], &pNode->m_Shifts[11]);
+		FUN_CalcShift(0x1f, pFormat->dwBBitMask, &pNode->m_Shifts[12], &pNode->m_Shifts[13]);
+		FUN_CalcShift(0x7c00, pFormat->dwRBitMask, &pNode->m_Shifts[14], &pNode->m_Shifts[15]);
+		FUN_CalcShift(0x3e0, pFormat->dwGBitMask, &pNode->m_Shifts[16], &pNode->m_Shifts[17]);
+		FUN_CalcShift(0x1f, pFormat->dwBBitMask, &pNode->m_Shifts[18], &pNode->m_Shifts[19]);
 
-		pNode->m_Unk94[0] = (uint16)pFormat->dwRBitMask;
-		pNode->m_Unk94[1] = (uint16)pFormat->dwGBitMask;
-		pNode->m_Unk94[2] = (uint16)pFormat->dwBBitMask;
-		pNode->m_Unk94[3] = (uint16)pFormat->dwRGBAlphaBitMask;
-		pNode->m_Unk9c = pFormat->dwRBitMask == 0x7c00 && pFormat->dwGBitMask == 0x3e0 && pFormat->dwBBitMask == 0x1f &&
+		pNode->m_rgbaMask[0] = (uint16)pFormat->dwRBitMask;
+		pNode->m_rgbaMask[1] = (uint16)pFormat->dwGBitMask;
+		pNode->m_rgbaMask[2] = (uint16)pFormat->dwBBitMask;
+		pNode->m_rgbaMask[3] = (uint16)pFormat->dwRGBAlphaBitMask;
+		pNode->m_b1555 = pFormat->dwRBitMask == 0x7c00 && pFormat->dwGBitMask == 0x3e0 && pFormat->dwBBitMask == 0x1f &&
 			pFormat->dwRGBAlphaBitMask == 0x8000;
-		pNode->m_Unka0 = pFormat->dwRBitMask == 0xf800 && pFormat->dwGBitMask == 0x7e0 && pFormat->dwBBitMask == 0x1f &&
+		pNode->m_b565 = pFormat->dwRBitMask == 0xf800 && pFormat->dwGBitMask == 0x7e0 && pFormat->dwBBitMask == 0x1f &&
 			pFormat->dwRGBAlphaBitMask == 0;
 		pNode->m_Link.m_pData = pNode;
 		dl_Insert(&g_TextureFormatList, &pNode->m_Link);
@@ -700,14 +700,13 @@ void d3d_FreeAllTextures()
 // FUNCTION: D3DREN 0x1001f9b0
 void d3d_ListTextureFormats()
 {
-	for (LTLink *pCur = g_TextureFormatList.m_pNext; pCur != &g_TextureFormatList; pCur = pCur->m_pNext)
-		d3d_PrintFormatInfo("", (TextureFormat *)pCur->m_pData);
-		
-	d3d_PrintFormatInfo("[FULLBRITE] - ", g_TextureFormats[FORMAT_FULLBRITE]);
-	d3d_PrintFormatInfo("[4444] - ", g_TextureFormats[FORMAT_4444]);
-	d3d_PrintFormatInfo("[NORMAL] - ", g_TextureFormats[FORMAT_NORMAL]);
-	d3d_PrintFormatInfo("[INTERFACE] - ", g_TextureFormats[FORMAT_INTERFACE]);
-	d3d_PrintFormatInfo("[LIGHTMAP] - ", g_TextureFormats[FORMAT_LIGHTMAP]);
+	for (LTLink *pCur = DAT_10062858.m_pNext; pCur != &DAT_10062858; pCur = pCur->m_pNext)
+		FUN_1001fa40("", (UnkType_TextureFormat *)pCur->m_pData);
+	FUN_1001fa40("[FULLBRITE] - ", DAT_10062830[FORMAT_FULLBRITE]);
+	FUN_1001fa40("[4444] - ", DAT_10062830[FORMAT_4444]);
+	FUN_1001fa40("[NORMAL] - ", DAT_10062830[FORMAT_NORMAL]);
+	FUN_1001fa40("[INTERFACE] - ", DAT_10062830[FORMAT_INTERFACE]);
+	FUN_1001fa40("[LIGHTMAP] - ", DAT_10062830[FORMAT_LIGHTMAP]);
 }
 
 // d3d_AddToString (0x1001ff80, defined below the printer): appends the text and a space to pStr and returns the end of the string.
@@ -739,7 +738,7 @@ void d3d_PrintFormatInfo(const char *pStart, TextureFormat *pFormat)
 	}
 	if (pFormat->m_PF.dwFlags & DDPF_FOURCC)
 	{
-		*(uint32 *)fourCC = pFormat->m_DDPF.dwFourCC;
+		*(uint32 *)fourCC = pFormat->m_PF.dwFourCC;
 		fourCC[4] = 0;
 		sprintf(spec, "FOURCC( %s )", fourCC);
 	}
@@ -1068,7 +1067,7 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 			cReq.m_pSrcFormat->InitPValueFormat();
 			cReq.m_pSrc = pMip->m_Data;
 			cReq.m_SrcPitch = pMip->m_Pitch;
-			DDPFToPFormat(&pFormat->m_DDPF, cReq.m_pDestFormat);
+			DDPFToPFormat(&pFormat->m_PF, cReq.m_pDestFormat);
 			cReq.m_pDest = pBits;
 			cReq.m_DestPitch = pitch;
 			cReq.m_Width = mipWidth;
@@ -1155,12 +1154,12 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 			for (k = 1; k < (int)nTilesX; k++)
 			{
 				uint8 *pSrcRow = pBits;
-				uint8 *pDstRow = pBits + pFormat->m_Unk30 * k * mipWidth;
+				uint8 *pDstRow = pBits + pFormat->m_BytesPP * k * mipWidth;
 				uint32 row;
 
 				for (row = mipHeight; row; row--)
 				{
-					memcpy(pDstRow, pSrcRow, mipWidth << pFormat->m_nBytesPP);
+					memcpy(pDstRow, pSrcRow, mipWidth << pFormat->m_BytesPPShift);
 					pSrcRow += pitch;
 					pDstRow += pitch;
 				}
@@ -1181,7 +1180,7 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 
 					for (row = mipHeight; row; row--)
 					{
-						memcpy(pDstRow, pSrcRow, surfWidth << pFormat->m_nBytesPP);
+						memcpy(pDstRow, pSrcRow, surfWidth << pFormat->m_BytesPPShift);
 						pSrcRow += pitch;
 						pDstRow += pitch;
 					}
@@ -1272,7 +1271,7 @@ int FUN_10020ab0(UnkType_RTextureBuild *pBuild, RTextureData *pData, uint32 iSta
 	}
 
 	bSupported = 0;
-	ddsd.ddpfPixelFormat = g_TextureFormats[iFormat]->m_DDPF;
+	ddsd.ddpfPixelFormat = DAT_10062830[iFormat]->m_DDPF;
 	width = ddsd.dwWidth;
 	height = ddsd.dwHeight;
 	if (DAT_1005c984 & D3DPTEXTURECAPS_SQUAREONLY)
@@ -1566,7 +1565,7 @@ RTexture *FUN_10021290(UnkType_RTextureBuild *pBuild, int bAdditional)
 			return 0;
 		goto ParseColorKey;
 	}
-	ddsd.ddpfPixelFormat = g_TextureFormats[iFormat]->m_DDPF;
+	ddsd.ddpfPixelFormat = DAT_10062830[iFormat]->m_DDPF;
 	AdjustAspectRatio(ddsd.dwWidth, ddsd.dwHeight, &ddsd.dwWidth, &ddsd.dwHeight);
 
 ParseColorKey:
@@ -1631,7 +1630,7 @@ ParseColorKey:
 	}
 	pRTexture->m_Data.m_nMemory = 0;
 	for (i = iStartMipmap; i < iStartMipmap + nMipmaps; i++)
-		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << g_TextureFormats[iFormat]->m_nBytesPP;
+		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << DAT_10062830[iFormat]->m_nBytesPP;
 	pRTexture->m_pSharedTexture = pBuild->m_pSharedTexture;
 	if (!(bAdditional & 1))
 		pBuild->m_pSharedTexture->m_pRenderData = pRTexture;

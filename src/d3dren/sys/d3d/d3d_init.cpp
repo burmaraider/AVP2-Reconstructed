@@ -325,7 +325,7 @@ int FUN_1001b870()
 }
 
 // ---- RenderStruct slots: 3D frame ----------------------------------------------------------------------------------------
-// guess: RenderStruct+0xc8 slot (the engine header leaves it as m_PadC8): returns 0.
+// RenderStruct::GetInfoFlags (0xc8): returns 0.
 // FUNCTION: D3DREN 0x1001bd70
 int d3d_GetInfoFlags()
 {

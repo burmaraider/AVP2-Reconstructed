@@ -74,7 +74,15 @@ struct RenderStruct
 	uint32			m_Height;		// 0x40
 	int				m_bInitted;		// 0x44
 
-	uint8			m_Pad48[0x70 - 0x48];
+	uint8			m_Pad48[0x58 - 0x48];	// 0x4c per-frame texture byte counter, 0x50 total texture memory (d3d.ren)
+
+	// Renderer profile counters (the demo manager's PDCounters: draw counts while "ShowPerformance" is on).
+	uint32			m_Ticks_TagVisibleLeaves;	// 0x58
+	uint32			m_Ticks_FlushObjectQueues;	// 0x5c
+	uint32			m_Ticks_Models;				// 0x60
+	uint32			m_Ticks_WorldModels;		// 0x64
+	uint32			m_Ticks_Translucent;		// 0x68
+	uint8			m_Pad6C[0x70 - 0x6c];
 
 	int				(*Init)(RenderStructInit *pInit);	// 0x70 Returns RENDER_OK for success, or an error code.
 	void			(*Term)();							// 0x74
@@ -99,7 +107,7 @@ struct RenderStruct
 	void			(*RenderCommand)(int argc, char *argv[]);	// 0xbc (console RenderCommand)
 	void*			(*GetHook)(char *pName);			// 0xc0 renderer objects by name ("LPDIRECTDRAW", "BACKBUFFER")
 	void			(*SwapBuffers)(uint32 flags);		// 0xc4
-	uint32			(*GetInfoFlags)();
+	uint8			m_PadC8[0xcc - 0xc8];
 	LTBOOL			(*GetScreenFormat)(PFormat *pFormat);			// 0xcc
 	HLTBUFFER		(*CreateSurface)(int width, int height);		// 0xd0
 	void			(*DeleteSurface)(HLTBUFFER hSurf);				// 0xd4
@@ -116,20 +124,21 @@ struct RenderStruct
 	void			(*ReadConsoleVariables)();					// 0x100
 	void			(*BlitFromScreen)(BlitRequest *pRequest);	// 0x104
 	uint8			m_Pad108[0x10c - 0x108];
-	SharedTexture	*m_pTexture10C;	// 0x10c textures the renderer holds (tagged by cm_TagUsedTextures; names unknown)
+	SharedTexture	*m_pEnvMapTexture;	// 0x10c the "EnvMap" console command's texture (consolecommands)
+	// A global pan texture (sky shadow, fog), indexed by the GLOBALPAN_ values (ILTClient::SetGlobalPanTexture/Info).
 	struct RSTextureRef
 	{
 		SharedTexture	*m_pTexture;
-		float			m_Unk04;			// 0x04 texture offset u (d3d.ren FUN_10007930: DAT_1004ffb0)
-		float			m_Unk08;			// 0x08 texture offset v
-		float			m_Unk0c;			// 0x0c texture width (the stage UV scale is divided by it)
-		float			m_Unk10;			// 0x10 texture height
-	}				m_TextureRefs[2];	// 0x110
-	LTVector		m_GlobalLightDir;	// 0x138 (0,-2,-1) normalized by r_InitRenderStruct
-	uint8			m_Pad144[0x150 - 0x144];
-	uint32			m_Unknown150;		// 0x150
+		float			m_xOffset, m_zOffset;		// d3d.ren: the texture offset in u, v
+		float			m_xScale, m_zScale;			// d3d.ren: the stage UV scale is divided by them
+	}				m_GlobalPans[NUM_GLOBALPAN_TYPES];	// 0x110
+	LTVector		m_GlobalLightDir;	// 0x138 (0,-2,-1) normalized by r_InitRenderStruct; ILTClient::Get/SetGlobalLightDir
+	LTVector		m_GlobalLightColor;	// 0x144 ILTClient::Get/SetGlobalLightColor
+	uint32			m_AmbientLight;		// 0x150 0-255 (ILTClient::Get/SetGlobalLightScale)
 	uint32			m_Unknown154;		// 0x154
 };
+
+typedef RenderStruct::RSTextureRef GlobalPanInfo;
 
 #define LTRENDER_VERSION	3421
 #define RENDER_OK			0

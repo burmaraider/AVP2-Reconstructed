@@ -1086,7 +1086,7 @@ void ModelDraw::FUN_1000d3a7(ModelInstance *pInstance)
 			m_Unk8a8 = m_pInstance->m_ColorA;
 	}
 
-	m_Unk618 = ((DAT_10057dd0 || (pInstance->m_Flags & FLAG_ENVIRONMENTMAP)) && DAT_10057be0 && g_pStruct->m_pTexture10C) ? 1 : 0;
+	m_Unk618 = ((DAT_10057dd0 || (pInstance->m_Flags & FLAG_ENVIRONMENTMAP)) && DAT_10057be0 && g_pStruct->m_pEnvMapTexture) ? 1 : 0;
 
 	m_fModelDist = g_ViewParams.m_Pos.Dist(m_Unk5d0);
 	m_fModelDist = m_fModelDist / g_CV_ModelZoomScale.m_FloatVal;

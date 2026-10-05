@@ -238,12 +238,12 @@ void r_InitRenderStruct(LTBOOL bFullClear)
 	g_Render.Free = r_Free;
 
 	g_Render.m_Unknown154 = 0;
-	g_Render.m_Unknown150 = 0;
+	g_Render.m_AmbientLight = 0;
 	g_Render.m_GlobalLightDir.Init(0.0f, -2.0f, -1.0f);
 	g_Render.m_GlobalLightDir.Norm();
 	g_Render.m_Unknown154 = 0;
-	g_Render.m_Unknown150 = 0;
-	g_Render.m_Unknown150 = 0;
+	g_Render.m_AmbientLight = 0;
+	g_Render.m_AmbientLight = 0;
 	g_Render.m_Unknown154 = 0;
 }
 

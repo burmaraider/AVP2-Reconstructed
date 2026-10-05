@@ -16,6 +16,7 @@
 #include "counter.h"
 #include "input.h"
 #include "demomgr.h"
+#include "render.h"		// g_Render (the renderer profile counters)
 
 // 0x0049c130 (timemgr.cpp)
 float time_GetTime();
@@ -54,16 +55,7 @@ extern uint32 g_Ticks_ProcessPackets;
 extern uint32 g_Ticks_GameClientShell;
 // GLOBAL: LITHTECH 0x004defa8
 extern uint32 g_Ticks_Render;
-// GLOBAL: LITHTECH 0x004e48e0
-extern uint32 g_Ticks_TagVisibleLeaves;
-// GLOBAL: LITHTECH 0x004e48e4
-extern uint32 g_Ticks_FlushObjectQueues;
-// GLOBAL: LITHTECH 0x004e48e8
-extern uint32 g_Ticks_Models;
-// GLOBAL: LITHTECH 0x004e48ec
-extern uint32 g_Ticks_WorldModels;
-// GLOBAL: LITHTECH 0x004e48f0
-extern uint32 g_Ticks_Translucent;
+// The renderer profile counters (0x004e48e0-0x004e48f0) are RenderStruct members: g_Render.m_Ticks_TagVisibleLeaves..m_Ticks_Translucent.
 
 // Name the emitted literal at its first byte so its relocation is symbol+0, not DAT_004d1afb+1.
 // GLOBAL: LITHTECH 0x004d1afc ??_C@_0BE@ECIK@?5?5?5?5?5?5?5?5Translucent?$AA@
@@ -100,11 +92,11 @@ PDCounter g_PDCounters[] =
 	PDCounter(&g_Ticks_ProcessPackets, "  ProcessPackets"),
 	PDCounter(&g_Ticks_GameClientShell, "  GameClientShell"),
 	PDCounter(&g_Ticks_Render, "    Render"),
-	PDCounter(&g_Ticks_TagVisibleLeaves, "      TagVisibleLeaves"),
-	PDCounter(&g_Ticks_FlushObjectQueues, "      FlushObjectQueues"),
-	PDCounter(&g_Ticks_Models, "        Models"),
-	PDCounter(&g_Ticks_WorldModels, "        WorldModels"),
-	PDCounter(&g_Ticks_Translucent, "        Translucent"),
+	PDCounter(&g_Render.m_Ticks_TagVisibleLeaves, "      TagVisibleLeaves"),
+	PDCounter(&g_Render.m_Ticks_FlushObjectQueues, "      FlushObjectQueues"),
+	PDCounter(&g_Render.m_Ticks_Models, "        Models"),
+	PDCounter(&g_Render.m_Ticks_WorldModels, "        WorldModels"),
+	PDCounter(&g_Render.m_Ticks_Translucent, "        Translucent"),
 };
 
 #define NUM_PDCOUNTERS	(sizeof(g_PDCounters) / sizeof(g_PDCounters[0]))

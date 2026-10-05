@@ -504,7 +504,7 @@ extern int DAT_10057b58;				// guess: frame counter (incremented per d3d_InitFra
 // GLOBAL: D3DREN 0x1005625c
 extern int DAT_1005625c;				// guess: the third argument of d3d_InitFrame
 // GLOBAL: D3DREN 0x10055ce0
-extern RenderStruct::RSTextureRef *DAT_10055ce0;	// &g_pStruct->m_TextureRefs (NAMING.md: "DAT_10055ce0 = &it")
+extern GlobalPanInfo *DAT_10055ce0;	// &g_pStruct->m_GlobalPans (NAMING.md: "DAT_10055ce0 = &it")
 // GLOBAL: D3DREN 0x10056284
 extern RenderContext *DAT_10056284;	// guess: the render context of the frame (CreateContext's object)
 // GLOBAL: D3DREN 0x100577b8
@@ -598,7 +598,7 @@ LTBOOL d3d_InitFrame(SceneDesc *pDesc, TLVertex *pScratchVerts, int nUnk)
 	g_pClipScratchVerts = pScratchVerts;
 	g_pSceneDesc = pDesc;
 	DAT_1005625c = nUnk;
-	DAT_10055ce0 = g_pStruct->m_TextureRefs;
+	DAT_10055ce0 = g_pStruct->m_GlobalPans;
 
 	// Get stuff out of the context (if it exists).
 	pContext = (RenderContext *)pDesc->m_hRenderContext;

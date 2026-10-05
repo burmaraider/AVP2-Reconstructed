@@ -649,7 +649,7 @@ extern int DAT_10058d00;	// guess: draw state flag (Gouraud fullbrites in use)
 // GLOBAL: D3DREN 0x10058c90
 extern UnkType_PoolBucket *DAT_10058c90;	// guess: list of ... (head of a list whose nodes come from the pool at 0x10058c98)
 // GLOBAL: D3DREN 0x10055ce0
-extern RenderStruct::RSTextureRef *DAT_10055ce0;	// &g_pStruct->m_TextureRefs
+extern GlobalPanInfo *DAT_10055ce0;	// &g_pStruct->m_GlobalPans
 
 extern void (*DAT_10058cd8)(WorldPoly *pPoly);
 extern void (*DAT_100587e8)(WorldPoly *pPoly);
@@ -988,7 +988,7 @@ void d3d_FullDrawScene(SceneDesc *pDesc)
 	}
 	else
 	{
-		CountAdder cntAdd((uint32 *)&g_pStruct->m_Pad48[0x10]);
+		CountAdder cntAdd(&g_pStruct->m_Ticks_TagVisibleLeaves);
 
 		FUN_10014e40_Call(0);
 		DAT_10058730 = 0;
@@ -1028,7 +1028,7 @@ void d3d_FullDrawScene(SceneDesc *pDesc)
 
 	{
 		CountAdder cntAdd(pDesc->m_pTicks_Render_Objects);
-		CountAdder cntAdd2((uint32 *)&g_pStruct->m_Pad48[0x14]);
+		CountAdder cntAdd2(&g_pStruct->m_Ticks_FlushObjectQueues);
 
 		d3d_FlushObjectQueues();
 	}

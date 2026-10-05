@@ -48,9 +48,6 @@ extern int32 g_CV_ConsoleTop;
 extern int32 g_CV_ConsoleRight;
 // GLOBAL: LITHTECH 0x004d2224
 extern int32 g_CV_ConsoleBottom;
-// The EnvMap command's texture.
-// GLOBAL: LITHTECH 0x004e4994
-extern SharedTexture *g_pEnvMapTexture;
 // ShowTicks flags.
 // GLOBAL: LITHTECH 0x004e3760
 extern int32 g_ShowTickCounts;
@@ -501,8 +498,8 @@ void con_EnvMap(int argc, char *argv[])
 	{
 		ref.m_FileType = FILE_CLIENTFILE;
 		ref.m_pFilename = argv[0];
-		g_pEnvMapTexture = cm_AddSharedTexture(g_pCommandClientMgr, &ref);
-		if(g_pEnvMapTexture)
+		g_Render.m_pEnvMapTexture = cm_AddSharedTexture(g_pCommandClientMgr, &ref);
+		if(g_Render.m_pEnvMapTexture)
 			dsi_ConsolePrint("Environment map set to %s.", argv[0]);
 		else
 			dsi_ConsolePrint("Couldn't find texture %s.", argv[0]);

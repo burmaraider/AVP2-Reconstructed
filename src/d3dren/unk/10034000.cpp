@@ -38,7 +38,7 @@
 // guess: the texture format table entry of the lightmap pages (W8's unit sys/d3d/d3d_texture); 0 when there is none.
 TextureFormat *d3d_GetLightmapTextureFormat();
 
-// Counters of the lightmap page code (cleared by FUN_10034597): texture memory of the pages, texels assigned, (unused).
+// Counters of the lightmap page code (cleared by PageInLightmaps): texture memory of the pages, texels assigned, (unused).
 // GLOBAL: D3DREN 0x100796e8
 int DAT_100796e8;
 // GLOBAL: D3DREN 0x100796ec
@@ -46,7 +46,7 @@ int DAT_100796ec;
 // GLOBAL: D3DREN 0x100796f0
 int DAT_100796f0;
 
-// ---- lightmap pages (the RenderContext holds the page list; FUN_10034597 builds it, FreeLightmapPages frees it) ----------------------
+// ---- lightmap pages (the RenderContext holds the page list; PageInLightmaps builds it, FreeLightmapPages frees it) ----------------------
 
 // guess: looks for a free rectangle of w x h texels (multiples of 4: the page's bitmap has one bit per 4x4 cell) in the pages
 // of the context; on success returns 1 with the position and the page.  (The declaration order and `h * w` pin the register allocation:
@@ -125,6 +125,7 @@ LightmapPage *FUN_10034142(RenderContext *pContext)
 		return 0;
 	}
 
+	TextureFormat *pFormat = d3d_GetLightmapTextureFormat();
 	TextureFormat *pFormat = d3d_GetLightmapTextureFormat();
 	if (!pFormat)
 	{
@@ -477,7 +478,7 @@ void FreeLightmapPages(RenderContext *pContext)
 		delete pPage;
 	}
 
-	pContext->m_pLightmapPages = 0	;
+	pContext->m_pLightmapPages = 0;
 
 	for (i = 0; i < pContext->m_pWorld->m_WorldModels.GetSize(); i++)
 		ClearPolyLightmapPages(pContext->m_pWorld->m_WorldModels[i]->m_pOriginalBsp);

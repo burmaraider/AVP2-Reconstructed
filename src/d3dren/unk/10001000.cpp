@@ -987,6 +987,7 @@ int ModelDraw::FUN_10004230(PieceLOD *pLOD, TLVertex *pVerts)
 }
 
 void d3d_BuildSpecularLookupTexture(float fSpecularPower);	// unit d3d_texture (W8): rebuilds the specular lookup table texture
+void d3d_BuildSpecularLookupTexture(float fSpecularPower);	// unit d3d_texture (W8): rebuilds the specular lookup table texture
 
 // guess: runs the draw callbacks over the pieces of the model: picks the vertex format / pool, binds each piece's skin and
 // calls pfnDrawA for the pieces that need no clipping and pfnDrawB for the others.
@@ -1069,6 +1070,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 			if (g_CV_SpecularScaleTest.m_FloatVal != 0.0f)
 				m_Unk630 = g_CV_SpecularScaleTest.m_FloatVal;
 			if (m_Unk630 != 0.0f && m_Unk5ec == (PFN_GenTexCoords)FUN_10001490)
+				d3d_BuildSpecularLookupTexture(m_Unk62c);
 				d3d_BuildSpecularLookupTexture(m_Unk62c);
 			if (!m_Unk3c4[i])
 				(this->*pfnDrawA)(pLOD, pVerts);

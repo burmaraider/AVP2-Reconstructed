@@ -87,15 +87,9 @@ void		linesystem_RemoveLine(HLOCALOBJ hObj, HLTLINE hLine);		// 0x004457f0
 // GLOBAL: LITHTECH 0x004e371c
 extern int32 g_CV_ForceClear;
 
-// Global pan textures (sky shadow, fog), indexed by the GLOBALPAN_ values.
-struct GlobalPanInfo
-{
-	SharedTexture	*m_pTexture;
-	float			m_xOffset, m_zOffset;
-	float			m_xScale, m_zScale;
-};
-// GLOBAL: LITHTECH 0x004e4998
-extern GlobalPanInfo g_GlobalPans[NUM_GLOBALPAN_TYPES];
+// The global pan textures (sky shadow, fog) and the global light are RenderStruct members (g_Render.m_GlobalPans at
+// 0x004e4998, m_GlobalLightDir 0x004e49c0, m_GlobalLightColor 0x004e49cc, m_AmbientLight 0x004e49d8): the renderer
+// reads them there.
 
 
 // ------------------------------------------------------------------------ //
@@ -138,13 +132,6 @@ struct LTRGBColor
 LTRESULT cm_RemoveObjectFromClientWorld(CClientMgr *pClientMgr, LTObject *pObject);	// 0x00412820
 void cm_RelocateObject(CClientMgr *pClientMgr, LTObject *pObject);				// 0x00426730
 
-// Global directional and ambient light (render globals).
-// GLOBAL: LITHTECH 0x004e49c0
-extern LTVector g_GlobalLightDir;
-// GLOBAL: LITHTECH 0x004e49cc
-extern LTVector g_GlobalLightColor;
-// GLOBAL: LITHTECH 0x004e49d8
-extern uint32 g_AmbientLight;
 
 
 #define CMSG_MESSAGE	11
@@ -1608,7 +1595,7 @@ inline LTRESULT CLTClient::SetCanvasRadius(HOBJECT hCanvas, float radius)
 // FUNCTION: LITHTECH 0x00407320
 inline LTRESULT CLTClient::GetGlobalLightDir(LTVector &dir)
 {
-	dir = g_GlobalLightDir;
+	dir = g_Render.m_GlobalLightDir;
 	return LT_OK;
 }
 
@@ -1619,28 +1606,28 @@ inline LTRESULT CLTClient::SetGlobalLightDir(LTVector dir)
 	if(dir.MagSqr() < 0.001f)
 		dir.Init(1.0f, 0.0f, 0.0f);
 
-	g_GlobalLightDir = dir;
+	g_Render.m_GlobalLightDir = dir;
 	return LT_OK;
 }
 
 // FUNCTION: LITHTECH 0x00407410
 inline LTRESULT CLTClient::GetGlobalLightColor(LTVector &color)
 {
-	color = g_GlobalLightColor;
+	color = g_Render.m_GlobalLightColor;
 	return LT_OK;
 }
 
 // FUNCTION: LITHTECH 0x00407440
 inline LTRESULT CLTClient::SetGlobalLightColor(LTVector color)
 {
-	g_GlobalLightColor = color;
+	g_Render.m_GlobalLightColor = color;
 	return LT_OK;
 }
 
 // FUNCTION: LITHTECH 0x00407470
 inline LTRESULT CLTClient::GetAmbientLight(float &light)
 {
-	light = (float)g_AmbientLight / 255.0f;
+	light = (float)g_Render.m_AmbientLight / 255.0f;
 	return LT_OK;
 }
 
@@ -1652,7 +1639,7 @@ inline LTRESULT CLTClient::SetAmbientLight(float light)
 	else if(light > 1.0f)
 		light = 1.0f;
 
-	g_AmbientLight = (uint32)(light * 255.0f);
+	g_Render.m_AmbientLight = (uint32)(light * 255.0f);
 	return LT_OK;
 }
 
@@ -2083,7 +2070,7 @@ inline HMODELANIM CLTClient::GetAnimIndex(HOBJECT hObj, char *pAnimName)
 
 inline uint32 CLTClient::GetObjectFlags(HOBJECT hObj)
 {
-	uint32 flags;
+	uint32 flags = 0;	// as the server's copy: /OPT:ICF folded the two (0x0047d140), so the original's client copy zeroes it too
 
 	m_pCommonLT->GetObjectFlags(hObj, OFT_Flags, flags);
 	return flags;
@@ -3713,7 +3700,7 @@ LTRESULT ci_SetGlobalPanTexture(uint32 index, char *pFilename)
 	if(index >= NUM_GLOBALPAN_TYPES)
 		RETURN_ERROR(1, SetGlobalPanTexture, LT_INVALIDPARAMS);
 
-	pInfo = &g_GlobalPans[index];
+	pInfo = &g_Render.m_GlobalPans[index];
 	if(pFilename)
 	{
 		ref.m_FileType = FILE_CLIENTFILE;
@@ -3738,7 +3725,7 @@ LTRESULT ci_SetGlobalPanInfo(uint32 index, float xOffset, float zOffset, float x
 	if(index >= NUM_GLOBALPAN_TYPES)
 		RETURN_ERROR(1, SetGlobalPanInfo, LT_INVALIDPARAMS);
 
-	pInfo = &g_GlobalPans[index];
+	pInfo = &g_Render.m_GlobalPans[index];
 	pInfo->m_xOffset = xOffset;
 	pInfo->m_zOffset = zOffset;
 	pInfo->m_xScale = xScale;

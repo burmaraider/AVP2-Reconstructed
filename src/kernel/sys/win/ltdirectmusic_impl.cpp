@@ -1316,7 +1316,7 @@ LTRESULT CLTDirectMusicMgr::StopMotif(const char* sStyleName, const char* sMotif
 LTBOOL CLTDirectMusicMgr::InitDirectMusic()
 {
 	// create the directmusic performance
-	if (FAILED(CoCreateInstance(CLSID_DirectMusicPerformance, LTNULL, CLSCTX_INPROC, IID_IDirectMusicPerformance, (void**)&m_pPerformance)))
+	if (FAILED(CoCreateInstance(CLSID_DirectMusicPerformance, LTNULL, CLSCTX_INPROC, IID_IDirectMusicPerformance8, (void**)&m_pPerformance)))
     {
 		// we failed set performance to LTNULL
 		m_pPerformance = LTNULL;

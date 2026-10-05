@@ -279,7 +279,7 @@ void FUN_1002473b(UnkType_SavedStage1 *pSaved)
 
 // guess: the central model draw (called once per model by 0x1000d3a7).  Clears the per-piece flag bytes, then draws the pieces:
 // first an environment map pass when EnvMapAll (or m_Unk618) is set and the engine holds an environment map texture
-// (RenderStruct::m_pTexture10C: FUN_10005700 + FUN_100045a0 with the fillers 0x100013d0/0x10001420, alpha blending on);
+// (RenderStruct::m_pEnvMapTexture: FUN_10005700 + FUN_100045a0 with the fillers 0x100013d0/0x10001420, alpha blending on);
 // unless EnvMapAll is set the normal pass follows: the bump mapped path (switch DAT_10069034, never set), the specular table
 // pass (ModelSpecular, validated device, Model::m_bSpecularEnable, table texture present), the detail texture pass (m_Unk30)
 // or the plain pass, each through FUN_10024c8b with its texture coordinate filler.  Then the ALPHABLENDENABLE state is put
@@ -304,12 +304,12 @@ void ModelDraw::FUN_1002476b()
 
 	IDirectDrawSurface7 *pOldTex;
 	int bTransform = 1;
-	if ((DAT_10057dd0 || m_Unk618) && g_pStruct->m_pTexture10C)
+	if ((DAT_10057dd0 || m_Unk618) && g_pStruct->m_pEnvMapTexture)
 	{
 		m_Unk5f4 = (PFN_FillTexCoords)FUN_100013d0;
 		m_Unk5ec = (PFN_GenTexCoords)FUN_10001420;
 		FUN_10005700();
-		d3d_SetTexture(g_pStruct->m_pTexture10C, g_NormalTextureStage, 0);
+		d3d_SetTexture(g_pStruct->m_pEnvMapTexture, g_NormalTextureStage, 0);
 		m_Unk4c4 = 0;
 		FUN_100045a0(0);
 		bTransform = 0;
@@ -354,7 +354,7 @@ void ModelDraw::FUN_1002476b()
 		}
 		else
 		{
-			if (g_CV_ModelSpecular.m_IntVal && DAT_1005c80c && m_pModel->m_bSpecularEnable && g_pSpecularTexture)
+			if (g_CV_ModelSpecular.m_Unk00 && DAT_1005c80c && m_pModel->m_bSpecularEnable && DAT_10062880)
 			{
 				m_Unk5e8 = 2;
 					g_pD3DDevice->GetTexture(1, &pOldTex);

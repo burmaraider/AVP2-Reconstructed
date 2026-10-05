@@ -108,7 +108,7 @@ inline DWORD F2DW(FLOAT f) { return *((DWORD *)&f); }
 // FUNCTION: D3DREN 0x1002421e
 void ModelDraw::FUN_1002421e()
 {
-	FUN_1000a27b(g_NormalTextureStage);
+	d3d_DisableTexture(g_NormalTextureStage);
 
 	ModelInstance *pInstance = m_pInstance;
 	const LTVector &Pos = pInstance->m_Pos;
@@ -170,7 +170,7 @@ void ModelDraw::FUN_100244b3(uint32 *pbResult)
 	if (DAT_10048750 && (m_ModelHookData.m_Flags & MHF_USETEXTURE))
 		m_Unk4c8 = 1;
 	else
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 
 	g_pD3DDevice->GetRenderState(D3DRENDERSTATE_FILLMODE, (unsigned long *)&DAT_10068030);
 	if (m_ModelHookData.m_ObjectFlags & FLAG_MODELWIREFRAME)
@@ -187,7 +187,7 @@ void ModelDraw::FUN_100244b3(uint32 *pbResult)
 		if (DAT_100584a8)
 		{
 			bResult = 0;
-			FUN_1000a27b(g_NormalTextureStage);
+			d3d_DisableTexture(g_NormalTextureStage);
 		}
 	}
 	*pbResult = bResult;
@@ -217,7 +217,7 @@ void ModelDraw::FUN_10024589(uint32 iSkin)
 		}
 		else
 		{
-			FUN_1000a27b(g_NormalTextureStage);
+			d3d_DisableTexture(g_NormalTextureStage);
 		}
 
 		if (m_Unk38 != -1)
@@ -232,14 +232,14 @@ void ModelDraw::FUN_10024589(uint32 iSkin)
 		{
 			g_pD3DDevice->GetTextureStageState(1, D3DTSS_COLOROP, (unsigned long *)&DAT_10067be8);
 			g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, 1);
-			FUN_1000a27b(1);
+			d3d_DisableTexture(1);
 		}
 
 		m_Unk4cc = iSkin;
 	}
 	else
 	{
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 	}
 }
 

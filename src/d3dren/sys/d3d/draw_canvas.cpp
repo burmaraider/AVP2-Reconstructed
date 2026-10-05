@@ -130,7 +130,7 @@ void CanvasDrawMgr::FUN_100224ae(Canvas *pCanvas)
 	g_pD3DDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 	m_States[LTRSTATE_ALPHAOP] = LTOP_SELECTDIFFUSE;
 	m_Unk28 = (pCanvas->m_Flags >> 6) & 1;
-	FUN_1000a27b(g_NormalTextureStage);
+	d3d_DisableTexture(g_NormalTextureStage);
 }
 
 // FUNCTION: D3DREN 0x10022645
@@ -299,16 +299,16 @@ LTRESULT CanvasDrawMgr::GetState(LTRState state, uint32 &val)
 LTRESULT CanvasDrawMgr::SetTexture(const char *pTexture)
 {
 	if (!pTexture) {
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 		return 0;
 	}
 	SharedTexture *pShared = g_pStruct->GetSharedTexture(pTexture);
 	if (!pShared) {
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 		return 1;
 	}
 	if (!d3d_SetTexture(pShared, g_NormalTextureStage, 0)) {
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 		return 1;
 	}
 	DAT_10063c90.FUN_10021da6();

@@ -10,8 +10,16 @@
 
 #include "d3dren/d3ddevice.h"	// the DirectDraw/Direct3D 7 globals (g_pD3DDevice = IDirect3DDevice7 *, ...) and the DX headers
 
+//MAY WANT TO MOVE THIS TO SHARED TEXTURE HEADER OR A COMMON HEADER FOR TEXTURE TYPES
+enum ESharedTexType
+{
+	eSharedTexType_Detail		= 0,
+	eSharedTexType_EnvMap		= 1,
+	eSharedTexType_EnvMapAlpha	= 2
+};
+
 // GLOBAL: D3DREN 0x100528d8
-extern int DAT_100528d8;	// guess: set by FUN_100099a9 (flag read by the world polygon draw code)
+extern int g_bChromaKeyPass;	// guess: set by FUN_100099a9 (flag read by the world polygon draw code)
 
 // GLOBAL: D3DREN 0x100617d8
 extern RTextureBase *g_pBoundTextures[8];	// guess: the texture data currently bound on each device stage
@@ -24,16 +32,16 @@ int d3d_SetLightmapTexture(WorldPoly *pTex, int nStage);
 
 // d3d_DisableTexture (d3d_texture.h): unbinds the texture of device stage nStage.  FUN_1000a27b is the exe's out-of-line copy of it, which
 // d3d_FullDrawScene calls (unit unk/100098d0 defines it as a wrapper of the inline).
-void FUN_1000a27b(int nStage);
+void d3d_DisableTexture(int nStage);
 
 // Second (detail) texture stage helpers.
-void FUN_1000a1c2(int nMode);	// guess: set up stage 1 for the detail pass (1 = modulate/add-signed, 2 = modulate alpha + add colour)
-void FUN_1000a211(void);		// guess: disable stage 1 colour and alpha
-void FUN_1000a23a(void);		// guess: stage 1 colour op = add-signed / modulate (DetailTextureAdd)
-void FUN_1000a25e(void);		// guess: disable stage 1 colour op and unbind its texture
+void d3d_SetEnvMapTextureStates(ESharedTexType eEnvMapType);	// guess: set up stage 1 for the detail pass (1 = modulate/add-signed, 2 = modulate alpha + add colour)
+void d3d_UnsetEnvMapTextureStates(void);		// guess: disable stage 1 colour and alpha
+void d3d_SetDetailTextureStates(void);		// guess: stage 1 colour op = add-signed / modulate (DetailTextureAdd)
+void d3d_UnsetDetailTexture(void);		// guess: disable stage 1 colour op and unbind its texture
 
-void FUN_100099a9(int nValue);	// guess: setter of DAT_100528d8
-int FUN_100099b3(void);			// guess: getter of DAT_100528d8
+void d3d_SetChromaKeyPass(int nValue);	// guess: setter of g_bChromaKeyPass
+int d3d_GetChromaKeyPass(void);			// guess: getter of g_bChromaKeyPass
 
 // Sets a render state and restores the old value in the destructor (inline in the exe: no symbols).
 // NAME: StateSet: Jupiter render_a/src/sys/d3d/d3d_draw.h class StateSet (m_State, m_OldVal; the constructor Gets the old value

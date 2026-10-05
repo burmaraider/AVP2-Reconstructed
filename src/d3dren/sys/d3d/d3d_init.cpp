@@ -571,8 +571,8 @@ extern uint32 DAT_1005c9a0;				// the device's normal D3DRENDERSTATE_ZENABLE val
 // GLOBAL: D3DREN 0x1005de1c
 extern float DAT_1005de1c;				// guess: 0.5f set when the device is up
 void FUN_100139f0();					// stage 0 texture blend (modulate), d3d_draw.h
-void FUN_1000a23a(void);				// d3dstate.h: stage 1 colour op = add-signed / modulate
-void FUN_1000a25e(void);				// d3dstate.h: disable stage 1 colour op and unbind its texture
+void d3d_SetDetailTextureStates(void);				// d3dstate.h: stage 1 colour op = add-signed / modulate
+void d3d_UnsetDetailTexture(void);				// d3dstate.h: disable stage 1 colour op and unbind its texture
 
 // NAME: d3d_CreateDevice: Jupiter d3d_device.cpp CD3D_Device::CreateDevice / d3d_init.cpp (the DirectDraw 7 form: DirectDrawCreateEx, cooperative
 // level, display mode, primary surface (flipping chain, or window primary + offscreen with a clipper), the Z buffer and device through FUN_1001aa70,
@@ -839,11 +839,11 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 		FUN_100246b7((UnkType_SavedStage1 *)aState);
 		DAT_1005c80c = g_pD3DDevice->ValidateDevice(&dwPasses) == 0;
 		FUN_1002473b((UnkType_SavedStage1 *)aState);
-		FUN_1000a23a();
+		d3d_SetDetailTextureStates();
 		DAT_1005de2c = g_pD3DDevice->ValidateDevice(&dwPasses) == 0;
 		if (DAT_1005c878.wMaxSimultaneousTextures < 2)
 			DAT_1005de2c = 0;
-		FUN_1000a25e();
+		d3d_UnsetDetailTexture();
 	}
 
 	DAT_1005c808 = (~DAT_1005c964.dwRasterCaps >> 15) & 1;

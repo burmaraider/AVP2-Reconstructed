@@ -205,7 +205,7 @@ int DrawPolyMgr::FUN_10029c5b(WorldPoly *pPoly, int iStage)
 // FUNCTION: D3DREN 0x10029cbb
 int DrawPolyMgr::FUN_10029cbb(WorldPoly *pPoly, int iStage)
 {
-	FUN_1000a27b(iStage);
+	d3d_DisableTexture(iStage);
 	return 1;
 }
 
@@ -618,7 +618,7 @@ void DrawPolyMgr::FUN_1002a8bc(UnkType_DPMNode *pNode)
 	TLVertex *pVerts;
 	int nVerts;
 
-	FUN_1000a27b(0);
+	d3d_DisableTexture(0);
 	LTLink *pLink = pNode->m_Unk00.m_pNext;
 	if (pLink == (LTLink *)pNode)
 		return;

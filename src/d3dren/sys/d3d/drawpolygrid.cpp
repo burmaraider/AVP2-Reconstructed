@@ -397,7 +397,7 @@ Textured:
 	if (bEnvMap)
 	{
 		FUN_1002c840(pGrid, &vYAxis, &vXInc, &vZInc);
-		FUN_1000a1c2(pTracker->m_pCurFrame->m_pTex->m_eTexType);
+		d3d_SetEnvMapTextureStates(pTracker->m_pCurFrame->m_pTex->m_eTexType);
 	}
 
 	if (bClip)
@@ -507,7 +507,7 @@ NextTri:
 	}
 
 	if (bEnvMap)
-		FUN_1000a211();
+		d3d_UnsetEnvMapTextureStates();
 }
 
 // guess: clip test of one triangle against the frustum planes of nClipFlags: returns 1 when it is completely outside one plane, 0

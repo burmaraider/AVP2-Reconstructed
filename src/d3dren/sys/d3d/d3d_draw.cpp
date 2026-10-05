@@ -357,7 +357,7 @@ void FUN_10013e00(void)
 	{
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, 1);
 	}
-	FUN_100099a9(1);
+	d3d_SetChromaKeyPass(1);
 }
 
 // guess: ends the alpha tested pass.
@@ -372,7 +372,7 @@ void FUN_10013e40(void)
 	{
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, 0);
 	}
-	FUN_100099a9(0);
+	d3d_SetChromaKeyPass(0);
 }
 
 // guess: grows the TL vertex scratch array DAT_100587fc to nVertices entries (keeping the old ones); 0 when the allocation fails.

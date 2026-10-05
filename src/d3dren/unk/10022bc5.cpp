@@ -244,7 +244,7 @@ void FUN_10022c01(WorldPoly *pPoly, int bSaturate)
 		return;
 	memcpy(pDest, pVerts, nVerts << 5);
 
-	if (FUN_100099b3())
+	if (d3d_GetChromaKeyPass())
 	{
 		pNode = FUN_10007ddb(pPoly, &DAT_1005a308, 0);
 		pNode->m_Unk04 = DAT_100587e4;
@@ -270,7 +270,7 @@ void FUN_10022c01(WorldPoly *pPoly, int bSaturate)
 		DWORD dwFogColor = FUN_10013990(DAT_10058040, DAT_10058041, DAT_10058042);
 		StateSet ssFog(D3DRENDERSTATE_FOGCOLOR, dwFogColor);
 
-		FUN_1000a27b(g_NormalTextureStage);
+		d3d_DisableTexture(g_NormalTextureStage);
 		g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG2);
 		if (bEnvMap)
 			FUN_1000ad48(pDest, nVerts, &g_ViewParams, 0x1c4);
@@ -281,7 +281,7 @@ void FUN_10022c01(WorldPoly *pPoly, int bSaturate)
 		g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 	}
 
-	if (FUN_100099b3())
+	if (d3d_GetChromaKeyPass())
 	{
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, dwOldAlphaBlend);
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHAFUNC, dwOldAlphaFunc);

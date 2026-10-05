@@ -864,7 +864,7 @@ void FUN_10030370(WorldPoly *pPoly)
 
 	if (!FUN_10008779(g_ClipFlags, &pVerts, &nVerts))
 	{
-		FUN_1000a25e();
+		d3d_UnsetDetailTexture();
 		return;
 	}
 
@@ -898,7 +898,7 @@ void FUN_10030370(WorldPoly *pPoly)
 					pRTexture = (UnkType_RTexW6 *)FUN_1001fff0(pTexture, nStage, 1);
 					if (!pRTexture)
 					{
-						FUN_1000a25e();
+						d3d_UnsetDetailTexture();
 						FUN_10014100(pPoly);
 						return;
 					}
@@ -910,7 +910,7 @@ void FUN_10030370(WorldPoly *pPoly)
 					pRTexture = (UnkType_RTexW6 *)FUN_1001fff0(pTexture, nStage, 0);
 					if (!pRTexture)
 					{
-						FUN_1000a25e();
+						d3d_UnsetDetailTexture();
 						FUN_10014100(pPoly);
 						return;
 					}
@@ -932,11 +932,11 @@ void FUN_10030370(WorldPoly *pPoly)
 				(!POLY_SURFACE(pPoly)->m_pTexture->m_eTexType || g_CV_EnvMapWorld.m_IntVal) &&
 				d3d_SetTexture(POLY_SURFACE(pPoly)->m_pTexture->m_pLinkedTexture, 1, 0))
 			{
-				FUN_1000a23a();
+				d3d_SetDetailTextureStates();
 			}
 			else
 			{
-				FUN_1000a25e();
+				d3d_UnsetDetailTexture();
 			}
 		}
 		else
@@ -946,7 +946,7 @@ void FUN_10030370(WorldPoly *pPoly)
 				g_pD3DDevice->SetTexture(g_NormalTextureStage, NULL);
 				g_pBoundTextures[g_NormalTextureStage] = 0;
 			}
-			FUN_1000a25e();
+			d3d_UnsetDetailTexture();
 		}
 	}
 
@@ -960,7 +960,7 @@ void FUN_10030370(WorldPoly *pPoly)
 
 	g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, 0x2c4, pVerts, nVerts, 0);
 	DAT_10063c90.FUN_10021da6();
-	FUN_1000a25e();
+	d3d_UnsetDetailTexture();
 }
 
 // the sprite size / bias constants of Jupiter drawsprite.cpp

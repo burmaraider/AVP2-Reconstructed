@@ -3610,7 +3610,7 @@ addr,end,kind,name,extra
 10051468,1005146c,data,"DAT_10051468",undefined4
 10051488,1005148c,data,"DAT_10051488",undefined4
 100528d4,100528d8,data,"DAT_100528d4",undefined4
-100528d8,100528dc,data,"DAT_100528d8",undefined4
+100528d8,100528dc,data,"g_bChromaKeyPass",undefined4
 100528e0,100528e4,data,"DAT_100528e0",undefined4
 10052900,10052904,data,"DAT_10052900",undefined4
 10052904,10052908,data,"DAT_10052904",undefined4

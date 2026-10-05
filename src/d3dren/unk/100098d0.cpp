@@ -66,15 +66,15 @@ ConVar g_CV_LMAnim("LMAnim", 1.0f);
 
 // guess: setter/getter pair for a global the draw code reads (name unknown).
 // FUNCTION: D3DREN 0x100099a9
-void FUN_100099a9(int nValue)
+void d3d_SetChromaKeyPass(int bChromaKeyPass)
 {
-	DAT_100528d8 = nValue;
+	g_bChromaKeyPass = bChromaKeyPass;
 }
 
 // FUNCTION: D3DREN 0x100099b3
-int FUN_100099b3(void)
+int d3d_GetChromaKeyPass(void)
 {
-	return DAT_100528d8;
+	return g_bChromaKeyPass;
 }
 
 // ---- world polygon drawing ------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ void FUN_100099b9(WorldPoly *pPoly)
 	pDest = FUN_1000a134(nVerts);
 	if (!pDest)
 		return;
-	if (DAT_100528d8 != 0)
+	if (g_bChromaKeyPass != 0)
 	{
 		if (nVerts != 0)
 		{
@@ -260,7 +260,7 @@ void FUN_100099b9(WorldPoly *pPoly)
 		else
 			FUN_1000ad48(pDest, nVerts, &g_ViewParams, 0x1c4);
 	}
-	if (DAT_100528d8 != 0)
+	if (g_bChromaKeyPass != 0)
 	{
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, dwOldAlphaBlend);
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHAFUNC, dwOldAlphaFunc);
@@ -468,45 +468,45 @@ void FUN_1000a16b(WorldPoly *pPoly)
 // guess: stage 1 is the detail texture stage: mode 1 = modulate (or add-signed when "DetailTextureAdd" is set) the
 // colour and select the alpha of the first stage; mode 2 = modulate alpha + add colour.
 // FUNCTION: D3DREN 0x1000a1c2
-void FUN_1000a1c2(int nMode)
+void d3d_SetEnvMapTextureStates(ESharedTexType eEnvMapType)
 {
-	switch (nMode)
+	switch (eEnvMapType)
 	{
-	case 1:
+	case eSharedTexType_EnvMap:
 		g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, g_CV_DetailTextureAdd.m_IntVal ? D3DTOP_ADDSIGNED : D3DTOP_MODULATE);
 		g_pD3DDevice->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 		break;
-	case 2:
+	case eSharedTexType_EnvMapAlpha:
 		g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATEALPHA_ADDCOLOR);
 		break;
 	}
 }
 
 // FUNCTION: D3DREN 0x1000a211
-void FUN_1000a211(void)
+void d3d_UnsetEnvMapTextureStates(void)
 {
 	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 	g_pD3DDevice->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
 }
 
 // FUNCTION: D3DREN 0x1000a23a
-void FUN_1000a23a(void)
+void d3d_SetDetailTextureStates(void)
 {
 	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, g_CV_DetailTextureAdd.m_IntVal ? D3DTOP_ADDSIGNED : D3DTOP_MODULATE);
 }
 
 // FUNCTION: D3DREN 0x1000a25e
-void FUN_1000a25e(void)
+void d3d_UnsetDetailTexture(void)
 {
 	g_pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-	FUN_1000a27b(1);
+	d3d_DisableTexture(1);
 }
 
 // The exe's out-of-line copy of the inline d3d_DisableTexture (d3d_texture.h), called by d3d_FullDrawScene (0x10014a40); every other caller expands
 // or calls the inline.  Same body as the inline (a wrapper around the inline does not match: SIZE), kept as its own definition because the call in
 // d3d_FullDrawScene must stay out of line.
 // FUNCTION: D3DREN 0x1000a27b
-void FUN_1000a27b(int nStage)
+void d3d_DisableTexture(int nStage)
 {
 	if (g_pBoundTextures[nStage])
 	{
@@ -524,7 +524,7 @@ void FUN_1000a2a7(void)
 	StageStateSet tssColorArg1(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 	StageStateSet tssColorArg2(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
 	DWORD dwOldAlphaBlend;
-	if (DAT_100528d8 == 0 && g_CV_LMFullBright.m_IntVal == 0)
+	if (g_bChromaKeyPass == 0 && g_CV_LMFullBright.m_IntVal == 0)
 	{
 		g_pD3DDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &dwOldAlphaBlend);
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
@@ -545,7 +545,7 @@ void FUN_1000a2a7(void)
 		else if (pBucket->m_Unk04 != 0)
 		{
 			SharedTexture *pTexture = ((Surface *)((WorldPoly *)pBucket->m_Unk04->m_Unk00)->m_pSurface)->m_pTexture;
-			if (FUN_100211d0(pTexture, 0) != 0 && DAT_100528d8 == 0 && g_CV_LMFullBright.m_IntVal == 0)
+			if (FUN_100211d0(pTexture, 0) != 0 && g_bChromaKeyPass == 0 && g_CV_LMFullBright.m_IntVal == 0)
 			{
 				if (DAT_100578ec != 0)
 					FUN_1000a538(pBucket, pTexture, 0, 0);
@@ -560,7 +560,7 @@ void FUN_1000a2a7(void)
 		sb_Free(&DAT_10058c98, pBucket);
 		pBucket = pNextBucket;
 	}
-	if (DAT_100528d8 == 0 && g_CV_LMFullBright.m_IntVal == 0)
+	if (g_bChromaKeyPass == 0 && g_CV_LMFullBright.m_IntVal == 0)
 	{
 		g_pD3DDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
 		if (DAT_100578ec != 0)
@@ -612,9 +612,9 @@ void FUN_1000a538(UnkType_PoolBucket *pBucket, SharedTexture *pTexture, int a3, 
 		if (pTexture->m_pStateChange)
 			DAT_10063c90.FUN_10021db7(pTexture->m_pStateChange, 1);
 		DAT_100514a8 = g_CV_DetailTextureScale.m_FloatVal;
-		FUN_1000a1c2(pTexture->m_eTexType);
+		d3d_SetEnvMapTextureStates(pTexture->m_eTexType);
 		FUN_1000a8c0(pBucket, a3, a4);
-		FUN_1000a211();
+		d3d_UnsetEnvMapTextureStates();
 	}
 	else
 	{
@@ -637,9 +637,9 @@ void FUN_1000a538(UnkType_PoolBucket *pBucket, SharedTexture *pTexture, int a3, 
 				DAT_100518d0 = 1.0f;
 				DAT_100513e0 = 0.0f;
 			}
-			FUN_1000a23a();
+			d3d_SetDetailTextureStates();
 			FUN_1000a8c0(pBucket, a3, a4);
-			FUN_1000a25e();
+			d3d_UnsetDetailTexture();
 		}
 		else
 			FUN_1000a70d(pBucket, a3, a4);

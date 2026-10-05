@@ -95,12 +95,12 @@ void FUN_10001230(void)
 	if (g_CV_ModelVBCount.m_IntVal <= 1)
 		g_CV_ModelVBCount.m_IntVal = 1;
 	g_CV_ModelVBSize.m_IntVal = ((g_CV_ModelVBSize.m_IntVal + 2) / 3) * 3;
-	DAT_1004d620.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
-	DAT_1004da80.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
-	DAT_1004eb48.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
-	DAT_1004dae0.FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
+	DAT_1004d620.FUN_1003a83d(g_pD3D, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
+	DAT_1004da80.FUN_1003a83d(g_pD3D, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 0, DAT_10058494);
+	DAT_1004eb48.FUN_1003a83d(g_pD3D, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
+	DAT_1004dae0.FUN_1003a83d(g_pD3D, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCount.m_IntVal, 1, DAT_10058494);
 	UnkType_VertexBufferPool *pCache = &UnkType_ModelVBCacheHolder::DAT_10093b10;
-	pCache->FUN_1003a83d(DAT_1005de34, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCache.m_IntVal, 1, DAT_10058494);
+	pCache->FUN_1003a83d(g_pD3D, g_CV_ModelVBSize.m_IntVal, g_CV_ModelVBCache.m_IntVal, 1, DAT_10058494);
 	UnkType_ModelVBCacheHolder::DAT_10093b10.m_Unk60 = g_CV_ModelVBCacheDelay.m_IntVal;
 }
 
@@ -986,7 +986,7 @@ int ModelDraw::FUN_10004230(PieceLOD *pLOD, TLVertex *pVerts)
 	return 1;
 }
 
-void FUN_1001e910(float fSpecularPower);	// unit d3d_texture (W8): rebuilds the specular lookup table texture
+void d3d_BuildSpecularLookupTexture(float fSpecularPower);	// unit d3d_texture (W8): rebuilds the specular lookup table texture
 
 // guess: runs the draw callbacks over the pieces of the model: picks the vertex format / pool, binds each piece's skin and
 // calls pfnDrawA for the pieces that need no clipping and pfnDrawB for the others.
@@ -1069,7 +1069,7 @@ void ModelDraw::FUN_10004270(PFN_DrawPiece pfnDrawA, PFN_DrawPiece pfnDrawB, int
 			if (g_CV_SpecularScaleTest.m_FloatVal != 0.0f)
 				m_Unk630 = g_CV_SpecularScaleTest.m_FloatVal;
 			if (m_Unk630 != 0.0f && m_Unk5ec == (PFN_GenTexCoords)FUN_10001490)
-				FUN_1001e910(m_Unk62c);
+				d3d_BuildSpecularLookupTexture(m_Unk62c);
 			if (!m_Unk3c4[i])
 				(this->*pfnDrawA)(pLOD, pVerts);
 			else

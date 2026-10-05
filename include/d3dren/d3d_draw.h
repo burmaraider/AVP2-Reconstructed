@@ -27,8 +27,8 @@ int FUN_10013e80(int nVertices);						// 0x10013e80: grows the 0x20-byte TL vert
 void FUN_10013ef0(WorldPoly *pPoly);					// 0x10013ef0: pushes pPoly on the flat poly list DAT_10058c68
 void FUN_100142b0(UnkType_PoolNode *pList);			// 0x100142b0: returns every node of a deferred list to the pool
 int FUN_100161e0(float *pVerts, int nMask);			// 0x100161e0 (not written yet): clips a 2-vertex line against the plane mask
-void FUN_100184f0();									// 0x100184f0: initialise the poly draw pools
-void FUN_10018550();									// 0x10018550: tear them down
+void d3d_InitPolyDrawPools();									// 0x100184f0: initialise the poly draw pools
+void d3d_TermPolyDrawPools();									// 0x10018550: tear them down
 int FUN_100185a0(void *pPolyData, uint32 nPolyData, LightAnim *pAnim, uint32 *pRef);	// 0x100185a0 (the exe returns 0 / 1)
 
 // NAME: d3d_GetBlendStates: Jupiter d3d_draw.h (the d3d.ren body is the same; Talon adds `m_ObjectType != OT_MODEL` to the fog disable test:

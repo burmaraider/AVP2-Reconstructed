@@ -77,7 +77,7 @@ HLTBUFFER d3d_CreateSurface(int width, int height)
 	IDirectDrawSurface7 *pSurface;
 	RSurface *pRSurface;
 
-	if (!DAT_10057810)
+	if (!g_pDD)
 		return NULL;
 	if (width == 0 || height == 0)
 		return NULL;
@@ -89,7 +89,7 @@ HLTBUFFER d3d_CreateSurface(int width, int height)
 	ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 	ddsd.dwWidth = width;
 	ddsd.dwHeight = height;
-	hResult = DAT_10057810->CreateSurface(&ddsd, &pSurface, NULL);
+	hResult = g_pDD->CreateSurface(&ddsd, &pSurface, NULL);
 	if (hResult != DD_OK)
 		return NULL;
 
@@ -213,7 +213,7 @@ void d3d_BlitFromScreen(BlitRequest *pRequest)
 	RSurface *pRSurface = (RSurface *)pRequest->m_hBuffer;
 
 	// Spit out a warning if we are in 3D..
-	if (DAT_1005de40)
+	if (g_bIn3D)
 	{
 		AddDebugMessage(20, "Warning: drawing a nonoptimized surface while in 3D mode.");
 		if (g_pD3DDevice)
@@ -229,7 +229,7 @@ void d3d_BlitFromScreen(BlitRequest *pRequest)
 	ddbltfx.dwSize = sizeof(ddbltfx);
 	pRSurface->m_pSurface->Blt(&destRect, g_pOffscreen, &srcRect, 0, &ddbltfx);
 
-	if (DAT_1005de40)
+	if (g_bIn3D)
 	{
 		if (g_pD3DDevice)
 			g_pD3DDevice->BeginScene();
@@ -243,7 +243,7 @@ void d3d_ReallyBlitToScreen(BlitRequest *pRequest)
 	RSurface *pRSurface = (RSurface *)pRequest->m_hBuffer;
 
 	// Spit out a warning if we are in 3D..
-	if (DAT_1005de40)
+	if (g_bIn3D)
 	{
 		AddDebugMessage(20, "Warning: drawing a nonoptimized surface while in 3D mode.");
 		if (g_pD3DDevice)
@@ -274,7 +274,7 @@ void d3d_ReallyBlitToScreen(BlitRequest *pRequest)
 
 	g_pOffscreen->Blt(&destRect, pRSurface->m_pSurface, &srcRect, dwFlags, &ddbltfx);
 
-	if (DAT_1005de40)
+	if (g_bIn3D)
 	{
 		if (g_pD3DDevice)
 			g_pD3DDevice->BeginScene();
@@ -293,13 +293,13 @@ void d3d_BlitToScreen(BlitRequest *pRequest)
 	RSurface *pRSurface = (RSurface *)pRequest->m_hBuffer;
 
 	// Optimize the surface if we need to use a blend mode
-	if (g_bInOptimized2D && DAT_1005de40 && (pRSurface->m_pTiles == NULL))
+	if (g_bInOptimized2D && g_bIn3D && (pRSurface->m_pTiles == NULL))
 	{
 		d3d_OptimizeSurface(pRequest->m_hBuffer, pRequest->m_TransparentColor.dwVal);
 	}
 
 	// Can this be drawn as an optimized 2D surface?
-	if (pRSurface->m_pTiles && g_bInOptimized2D && DAT_1005de40)
+	if (pRSurface->m_pTiles && g_bInOptimized2D && g_bIn3D)
 	{
 		d3d_BlitToScreen3D(pRequest);
 	}
@@ -319,7 +319,7 @@ LTBOOL d3d_WarpToScreen(BlitRequest *pRequest)
 	RSurface *pRSurface = (RSurface *)pRequest->m_hBuffer;
 
 	// Can this be drawn as an optimized 2D surface?
-	if (pRSurface->m_pTiles && g_bInOptimized2D && DAT_1005de40)
+	if (pRSurface->m_pTiles && g_bInOptimized2D && g_bIn3D)
 	{
 		d3d_WarpToScreen3D(pRequest);
 		return LTTRUE;
@@ -451,7 +451,7 @@ void d3d_SwapBuffers(uint32 flags)
 	POINT pt;
 	HWND hWnd;
 
-	if (DAT_10057818)
+	if (g_pBackBuffer)
 	{
 		if (flags & 4)
 		{
@@ -470,7 +470,7 @@ void d3d_SwapBuffers(uint32 flags)
 					g_pOffscreen->Unlock(&lockRect);
 			}
 
-			if (DAT_10057814)
+			if (g_pPrimary)
 			{
 				if (g_bRunWindowed)
 				{
@@ -488,12 +488,12 @@ void d3d_SwapBuffers(uint32 flags)
 					pt.y = clientRect.top;
 				}
 
-				if (!DAT_1005de38 && DAT_10057810)
+				if (!g_pClipper && g_pDD)
 				{
-					if (DAT_10057810->CreateClipper(0, &DAT_1005de38, NULL) == 0 && DAT_1005de38)
+					if (g_pDD->CreateClipper(0, &g_pClipper, NULL) == 0 && g_pClipper)
 					{
-						DAT_1005de38->SetHWnd(0, hWnd);
-						DAT_10057814->SetClipper(DAT_1005de38);
+						g_pClipper->SetHWnd(0, hWnd);
+						g_pPrimary->SetClipper(g_pClipper);
 					}
 				}
 
@@ -513,14 +513,14 @@ void d3d_SwapBuffers(uint32 flags)
 				destRect.bottom = g_ScreenHeight + pt.y;
 				memset(&bltfx, 0, sizeof(bltfx));
 				bltfx.dwSize = sizeof(bltfx);
-				DAT_10057814->Blt(&destRect, DAT_10057818, &srcRect, DDBLT_WAIT, &bltfx);
+				g_pPrimary->Blt(&destRect, g_pBackBuffer, &srcRect, DDBLT_WAIT, &bltfx);
 			}
 			else
 			{
 				if (flags & 2)
-					DAT_10057818->Blt(NULL, g_pOffscreen, NULL, DDBLT_WAIT, NULL);
+					g_pBackBuffer->Blt(NULL, g_pOffscreen, NULL, DDBLT_WAIT, NULL);
 				else
-					DAT_10057818->Flip(NULL, DDFLIP_WAIT);
+					g_pBackBuffer->Flip(NULL, DDFLIP_WAIT);
 			}
 			ClearDirtyRects();
 		}

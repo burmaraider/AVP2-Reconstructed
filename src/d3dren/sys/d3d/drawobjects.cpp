@@ -25,7 +25,7 @@ extern void FUN_1000b772();					// OT_MODEL ModuleInit
 extern void thunk_FUN_10001340();			// OT_MODEL ModuleTerm (5-byte jmp thunk)
 extern void d3d_ModelPreFrame();
 extern void d3d_ProcessModel(LTObject *pObject);
-extern void FUN_1002cc80();					// empty PreFrame function shared by four object types
+extern void d3d_NullPreFrameCallback();					// empty PreFrame function shared by four object types
 extern void d3d_ProcessWorldModel(LTObject *pObject);
 extern void d3d_ProcessSprite(LTObject *pObject);
 extern void d3d_ProcessLight(LTObject *pObject);
@@ -35,7 +35,7 @@ extern void FUN_1002ce10();					// OT_POLYGRID ModuleInit
 extern void d3d_TermPolyGridDraw();			// OT_POLYGRID ModuleTerm
 extern void d3d_ProcessPolyGrid(LTObject *pObject);
 extern void d3d_ProcessLineSystem(LTObject *pObject);
-extern void FUN_100235e1();					// OT_CANVAS PreFrame
+extern void d3d_NullCallback();					// OT_CANVAS PreFrame
 extern void d3d_ProcessCanvas(LTObject *pObject);
 
 // GLOBAL: D3DREN 0x1004ba78
@@ -46,9 +46,9 @@ ObjectHandler g_ObjectHandlers[11] =
 	// OT_MODEL
 	{ FUN_1000b772, thunk_FUN_10001340, 0, d3d_ModelPreFrame, d3d_ProcessModel },
 	// OT_WORLDMODEL
-	{ 0, 0, 0, FUN_1002cc80, d3d_ProcessWorldModel },
+	{ 0, 0, 0, d3d_NullPreFrameCallback, d3d_ProcessWorldModel },
 	// OT_SPRITE
-	{ 0, 0, 0, FUN_1002cc80, d3d_ProcessSprite },
+	{ 0, 0, 0, d3d_NullPreFrameCallback, d3d_ProcessSprite },
 	// OT_LIGHT
 	{ 0, 0, 0, 0, d3d_ProcessLight },
 	// OT_CAMERA
@@ -56,13 +56,13 @@ ObjectHandler g_ObjectHandlers[11] =
 	// OT_PARTICLESYSTEM
 	{ 0, 0, 0, FUN_100296a6, d3d_ProcessParticles },
 	// OT_POLYGRID
-	{ FUN_1002ce10, d3d_TermPolyGridDraw, 0, FUN_1002cc80, d3d_ProcessPolyGrid },
+	{ FUN_1002ce10, d3d_TermPolyGridDraw, 0, d3d_NullPreFrameCallback, d3d_ProcessPolyGrid },
 	// OT_LINESYSTEM
-	{ 0, 0, 0, FUN_1002cc80, d3d_ProcessLineSystem },
+	{ 0, 0, 0, d3d_NullPreFrameCallback, d3d_ProcessLineSystem },
 	// OT_CONTAINER (containers drawn like WorldModels)
 	{ 0, 0, 0, 0, d3d_ProcessWorldModel },
 	// OT_CANVAS
-	{ 0, 0, 0, FUN_100235e1, d3d_ProcessCanvas },
+	{ 0, 0, 0, d3d_NullCallback, d3d_ProcessCanvas },
 };
 
 // FUNCTION: D3DREN 0x100285e0

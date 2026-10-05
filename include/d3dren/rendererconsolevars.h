@@ -119,7 +119,7 @@ extern int DAT_10057f00;
 // GLOBAL: D3DREN 0x10057f70
 extern int DAT_10057f70;
 // GLOBAL: D3DREN 0x10057f74
-extern int DAT_10057f74;
+extern int g_b32BitLightmaps;
 // GLOBAL: D3DREN 0x10058038
 extern int DAT_10058038;
 // GLOBAL: D3DREN 0x1005803c

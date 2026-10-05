@@ -72,7 +72,7 @@ void FUN_10010967()
 
 // guess: the LISTDEVICES console command: prints "Device: %s" for each device
 // FUNCTION: D3DREN 0x10010998
-void FUN_10010998()
+void d3d_ListDevices()
 {
 	LTLink *pCur;
 
@@ -87,7 +87,7 @@ void FUN_10010998()
 void *d3d_GetHook(char *pName)
 {
 	if (strcmp(pName, "LPDIRECTDRAW") == 0)
-		return DAT_10057810;
+		return g_pDD;
 
 	if (strcmp(pName, "BACKBUFFER") == 0)
 		return g_pOffscreen;
@@ -127,7 +127,7 @@ LTBOOL r_GetBufferFormatOfSurface(LPDIRECTDRAWSURFACE7 pSurface, PFormat *pForma
 
 // Functions of the device bring-up unit (sys/d3d/d3d_init) and of this unit further down.
 void FUN_10012eaf(char *pStr);
-void FUN_1001b7e0();
+void CD3D_Device_FreeDevice();
 void FUN_1001b840();
 int FUN_1001b870();
 int FUN_1001acc0(UnkType_DeviceNode *pDevice, RenderStructInit *pInit);
@@ -135,44 +135,44 @@ int FUN_1001acc0(UnkType_DeviceNode *pDevice, RenderStructInit *pInit);
 // guess: releases the DirectDraw objects (clipper, primary/offscreen surfaces, IDirectDraw7) and shows the cursor again
 // (names_proposal: guess_d3d_FreeDDraw, low)
 // FUNCTION: D3DREN 0x10010a69
-void FUN_10010a69()
+void d3d_FreeDDraw()
 {
 	ShowCursor(1);
-	FUN_1001b7e0();
+	CD3D_Device_FreeDevice();
 
-	if (DAT_10057814)
+	if (g_pPrimary)
 	{
-		DAT_10057814->Release();
-		DAT_10057814 = 0;
-		if (DAT_10057818)
+		g_pPrimary->Release();
+		g_pPrimary = 0;
+		if (g_pBackBuffer)
 		{
-			DAT_10057818->Release();
-			DAT_10057818 = 0;
+			g_pBackBuffer->Release();
+			g_pBackBuffer = 0;
 		}
 		g_pOffscreen = 0;
-		if (DAT_1005de38)
+		if (g_pClipper)
 		{
-			DAT_1005de38->Release();
-			DAT_1005de38 = 0;
+			g_pClipper->Release();
+			g_pClipper = 0;
 		}
 	}
 	else
 	{
-		if (DAT_10057818)
+		if (g_pBackBuffer)
 		{
-			DAT_10057818->Release();
-			DAT_10057818 = 0;
+			g_pBackBuffer->Release();
+			g_pBackBuffer = 0;
 		}
 		if (g_pOffscreen)
 			g_pOffscreen = 0;
 	}
 
-	if (DAT_10057810)
+	if (g_pDD)
 	{
-		DAT_10057810->RestoreDisplayMode();
-		DAT_10057810->SetCooperativeLevel(0, DDSCL_NORMAL);
-		DAT_10057810->Release();
-		DAT_10057810 = 0;
+		g_pDD->RestoreDisplayMode();
+		g_pDD->SetCooperativeLevel(0, DDSCL_NORMAL);
+		g_pDD->Release();
+		g_pDD = 0;
 	}
 }
 
@@ -182,7 +182,7 @@ void d3d_Term()
 {
 	FUN_10010967();
 	FUN_1001b840();
-	FUN_10010a69();
+	d3d_FreeDDraw();
 }
 
 
@@ -285,7 +285,7 @@ DeviceReady:
 	{
 		FUN_10010967();
 		FUN_1001b840();
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		pMsg = "Can't find any d3d devices to use!";
 	}
 	else
@@ -338,11 +338,11 @@ DeviceReady:
 		}
 		SetWindowPos(g_hWnd, hWndInsertAfter, posX, posY, cx, cy, uFlags);
 
-		if (!r_GetBufferFormatOfSurface(DAT_10057818, &DAT_100577c8))
+		if (!r_GetBufferFormatOfSurface(g_pBackBuffer, &DAT_100577c8))
 		{
 			FUN_10010967();
 			FUN_1001b840();
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			pMsg = "r_GetBufferFormatOfSurface failed.";
 		}
 		else
@@ -356,7 +356,7 @@ DeviceReady:
 
 			FUN_10010967();
 			FUN_1001b840();
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			pMsg = "VisibleSet::Init failed (invalid object list size?).";
 		}
 	}
@@ -486,7 +486,7 @@ void d3d_UnbindTexture(SharedTexture *pTexture);												// 0x10021c60
 void d3d_Clear(LTRect *pRect, uint32 flags, LTVector *pColor);									// 0x100142f0
 int d3d_RenderScene(SceneDesc *pScene);															// 0x10017aa0
 void d3d_SwapBuffers(uint32 flags);																// 0x1001e189
-int FUN_1001bd70();																				// 0x1001bd70 (slot 0xc8, returns 0)
+int d3d_GetInfoFlags();																				// 0x1001bd70 (slot 0xc8, returns 0)
 void d3d_GetScreenFormat(PFormat *pFormat);													// 0x1001dec3
 HLTBUFFER d3d_CreateSurface(int width, int height);												// 0x1001da7f
 void d3d_DeleteSurface(HLTBUFFER hSurf);														// 0x1001db2d
@@ -555,7 +555,7 @@ extern "C" void RenderDLLSetup(RenderStruct *pStruct)
 	RS_SET(RenderCommand, d3d_RenderCommand);
 	RS_SET(GetHook, d3d_GetHook);
 	RS_SET(SwapBuffers, d3d_SwapBuffers);
-	RS_SET_PAD(0xc8, FUN_1001bd70);
+	RS_SET(GetInfoFlags, d3d_GetInfoFlags);
 	RS_SET(GetScreenFormat, d3d_GetScreenFormat);
 	RS_SET(CreateSurface, d3d_CreateSurface);
 	RS_SET(DeleteSurface, d3d_DeleteSurface);

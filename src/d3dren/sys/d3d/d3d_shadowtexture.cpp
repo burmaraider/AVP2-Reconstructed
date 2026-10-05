@@ -128,7 +128,7 @@ bool D3DShadowTexture::Init(uint32 uiSizeX, uint32 uiSizeY)
 	memcpy(&ddsd.ddpfPixelFormat, &ddpf, sizeof(ddpf));
 
 	IDirectDrawSurface7 *pSurface = NULL;
-	hResult = DAT_10057810->CreateSurface(&ddsd, &pSurface, NULL);
+	hResult = g_pDD->CreateSurface(&ddsd, &pSurface, NULL);
 	DAT_100606d0 = D3DAppErrorToString(hResult);
 	if (hResult == DD_OK)
 	{

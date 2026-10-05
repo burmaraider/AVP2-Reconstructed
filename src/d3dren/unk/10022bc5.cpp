@@ -461,7 +461,7 @@ void FUN_10023398(WorldPoly *pPoly)
 
 // guess: nothing (the PreFrame hook of OT_CANVAS in the object handler table, see unit unk/100285a0).
 // FUNCTION: D3DREN 0x100235e1
-void FUN_100235e1(void)
+void d3d_NullCallback(void)
 {
 }
 

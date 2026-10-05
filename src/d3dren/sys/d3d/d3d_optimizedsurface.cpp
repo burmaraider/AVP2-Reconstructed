@@ -182,7 +182,7 @@ void d3d_DoAlphaFromColorKey(FMConvertRequest *pRequest, uint32 srcAlpha32, uint
 
 // NAME: d3d_FillSurfaceTiles: names_proposal.csv (high, Jupiter d3d_FillSurfaceTiles)
 // FUNCTION: D3DREN 0x1001c133
-LTBOOL d3d_FillSurfaceTiles(RSurface *pSurface, UnkType_TextureFormat *pDestFormat, PValue transparentColor)
+LTBOOL d3d_FillSurfaceTiles(RSurface *pSurface, TextureFormat *pDestFormat, PValue transparentColor)
 {
 	// setup the formats we will be using, we convert from the image format to the screen format
 	LTRect rect;
@@ -190,7 +190,7 @@ LTBOOL d3d_FillSurfaceTiles(RSurface *pSurface, UnkType_TextureFormat *pDestForm
 	PFormat srcFormat, destFormat;
 	d3d_GetScreenFormat(&srcFormat);
 
-	DDPFToPFormat(&pDestFormat->m_DDPF, &destFormat);
+	DDPFToPFormat(&pDestFormat->m_PF, &destFormat);
 
 	GenericColor tColor;
 	g_FormatMgr.PValueToFormatColor(&srcFormat, transparentColor, tColor);
@@ -303,7 +303,7 @@ LTBOOL d3d_OptimizeSurface(HLTBUFFER hBuffer, PValue transparentColor)
 		return LTFALSE;
 
 	// Do we have a texture format we can use?
-	UnkType_TextureFormat *pFormat = DAT_10062830[FORMAT_INTERFACE];
+	TextureFormat *pFormat = g_TextureFormats[FORMAT_INTERFACE];
 	if (!pFormat)
 		return LTFALSE;
 
@@ -363,8 +363,8 @@ LTBOOL d3d_OptimizeSurface(HLTBUFFER hBuffer, PValue transparentColor)
 				desc.ddsCaps.dwCaps2 = DDSCAPS2_TEXTUREMANAGE;
 				desc.dwWidth = pTile->m_nTileWidth;
 				desc.dwHeight = pTile->m_nTileHeight;
-				memcpy(&desc.ddpfPixelFormat, &pFormat->m_DDPF, sizeof(DDPIXELFORMAT));
-				HRESULT hResult = DAT_10057810->CreateSurface(&desc, &pTile->m_pTexture, NULL);
+				memcpy(&desc.ddpfPixelFormat, &pFormat->m_PF, sizeof(DDPIXELFORMAT));
+				HRESULT hResult = g_pDD->CreateSurface(&desc, &pTile->m_pTexture, NULL);
 				if (hResult != DD_OK)
 				{
 					d3d_DestroyTiles(pSurface);
@@ -389,7 +389,7 @@ LTBOOL d3d_OptimizeSurface(HLTBUFFER hBuffer, PValue transparentColor)
 // FUNCTION: D3DREN 0x1001c627
 LTBOOL d3d_StartOptimized2D()
 {
-	if (!g_pD3DDevice || !DAT_1005de40)
+	if (!g_pD3DDevice || !g_bIn3D)
 		return LTFALSE;
 	if (g_bInOptimized2D)
 		return LTTRUE;
@@ -423,7 +423,7 @@ LTBOOL d3d_StartOptimized2D()
 // FUNCTION: D3DREN 0x1001c725
 void d3d_EndOptimized2D()
 {
-	if (!g_pD3DDevice || !DAT_1005de40)
+	if (!g_pD3DDevice || !g_bIn3D)
 		return;
 	if (!g_bInOptimized2D)
 		return;

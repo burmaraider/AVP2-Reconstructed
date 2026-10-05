@@ -88,7 +88,7 @@ ConVar g_CV_32BitTextures("32BitTextures", 0.0f, &DAT_10057e2c);
 // FUNCTION: D3DREN 0x1001137f _$E20
 // FUNCTION: D3DREN 0x10011384 _$E19
 // GLOBAL: D3DREN 0x10057930
-ConVar g_CV_32BitLightmaps("32BitLightMaps", 0.0f, &DAT_10057f74);
+ConVar g_CV_32BitLightmaps("32BitLightMaps", 0.0f, &g_b32BitLightmaps);
 // FUNCTION: D3DREN 0x100113ce _$E23
 // FUNCTION: D3DREN 0x100113d3 _$E22
 // GLOBAL: D3DREN 0x100580f8

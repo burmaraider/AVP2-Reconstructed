@@ -48,10 +48,10 @@ void d3d_DestroyTiles(RSurface *pSurface);			// FUN_1001bf10 (also called by Del
 
 // d3d_optimizedsurface functions of the W7 package (src/d3dren/sys/d3d/d3d_optimizedsurface part, 0x1001bf63-0x1001d1b4).  Most are
 // RenderStruct slots (RenderDLLSetup 0x10010ff1); the return type is LTBOOL (int) like the RenderStruct members.
-struct UnkType_TextureFormat;
+struct TextureFormat;
 void d3d_SetSolidAlpha(FMConvertRequest *pRequest, uint32 destAlpha32, GenericColor &tColor);										// 0x1001bf63
 void d3d_DoAlphaFromColorKey(FMConvertRequest *pRequest, uint32 srcAlpha32, uint32 destAlpha32, GenericColor &tColor);			// 0x1001bfb4
-LTBOOL d3d_FillSurfaceTiles(RSurface *pSurface, UnkType_TextureFormat *pDestFormat, PValue transparentColor);						// 0x1001c133
+LTBOOL d3d_FillSurfaceTiles(RSurface *pSurface, TextureFormat *pDestFormat, PValue transparentColor);						// 0x1001c133
 void d3d_UnoptimizeSurface(HLTBUFFER hBuffer);																						// 0x1001c3d2 RenderStruct +0xe8
 LTBOOL d3d_OptimizeSurface(HLTBUFFER hBuffer, PValue transparentColor);															// 0x1001c3e4 RenderStruct +0xe4
 LTBOOL d3d_StartOptimized2D();																										// 0x1001c627 RenderStruct +0x9c

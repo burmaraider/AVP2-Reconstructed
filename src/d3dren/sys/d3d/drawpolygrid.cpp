@@ -667,7 +667,7 @@ void FUN_1002c840(LTPolyGrid *pGrid, LTVector *pYAxis, LTVector *pXAxis, LTVecto
 // A lone `ret`: the linker folded every identical empty function into this copy (the PreFrame slot of the WORLDMODEL, SPRITE, POLYGRID
 // and LINESYSTEM entries of g_ObjectHandlers).
 // FUNCTION: D3DREN 0x1002cc80
-void FUN_1002cc80()
+void d3d_NullPreFrameCallback()
 {
 }
 

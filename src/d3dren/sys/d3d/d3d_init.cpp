@@ -11,21 +11,21 @@
 #include "pixelformat.h"			// PFormat
 
 // ---- callees in other units (prototypes until their owners publish headers) -------------------------------------------------
-int FUN_10034597(RenderContext *pContext);		// W9 (lightmap): page the lightmaps in, 0 = failed
+int PageInLightmaps(RenderContext *pContext);	// W9 (lightmap): page the lightmaps in, 0 = failed
 void FreeLightmapPages(RenderContext *pContext);// W9: free the lightmap pages of the context
-void FUN_1001eb80();							// W8 (d3d_texture): guess_ReinitLightmapTextureSupport
-void FUN_1001f770();							// W8: CTextureManager::Term
-void FUN_1001f960();							// W8: CTextureManager::FreeAllTextures
-void FUN_1001f9b0();							// W8: CTextureManager::ListTextureFormats
-void FUN_10010998();							// common_init: list the enumerated devices (LISTDEVICES)
+void d3d_ReinitLightmapTextureSupport();		// W8 (d3d_texture): guess_ReinitLightmapTextureSupport
+void d3d_TermTextureManager();							// W8: CTextureManager::Term
+void d3d_FreeAllTextures();							// W8: CTextureManager::FreeAllTextures
+void d3d_ListTextureFormats();							// W8: CTextureManager::ListTextureFormats
+void d3d_ListDevices();							// common_init: list the enumerated devices (LISTDEVICES)
 void d3d_EndOptimized2D();						// 0x1001c725 (W7, d3d_surface)
-void FUN_100235e1();							// 10021d70 unit (empty)
-void FUN_10018550();							// 100132a0 unit
-void FUN_1002cc80();							// empty PreFrame stub
+void d3d_NullCallback();							// 10021d70 unit (empty)
+void d3d_TermPolyDrawPools();							// 100132a0 unit
+void d3d_NullPreFrameCallback();							// empty PreFrame stub
 void d3d_TermObjectModules();					// 0x10028610
 void d3d_InitObjectModules();					// 0x100285e0
-void FUN_100184f0();							// 100132a0 unit
-void FUN_10010a69();							// common_init: release the DirectDraw objects
+void d3d_InitPolyDrawPools();							// 100132a0 unit
+void d3d_FreeDDraw();							// common_init: release the DirectDraw objects
 
 // ---- console variables (static initialisers; the original object's _$E numbers) ------------------------------------------
 // FUNCTION: D3DREN 0x1001a380 _$E2
@@ -227,7 +227,7 @@ HRENDERCONTEXT d3d_CreateContext(RenderContextInit *pInit)
 	}
 	if (DAT_1005de20)
 	{
-		if (!FUN_10034597(pContext))
+		if (!PageInLightmaps(pContext))
 		{
 			AddDebugMessage(0, "Warning: unable to create lightmap pages.  Lightmapping disabled.");
 			DAT_1005de20 = 0;
@@ -256,10 +256,10 @@ void d3d_RebindLightmaps(RenderContext *pContext)
 		FreeLightmapPages(pContext);
 	if (DAT_1005de20)
 	{
-		FUN_1001eb80();
+		d3d_ReinitLightmapTextureSupport();
 		if (pContext)
 		{
-			if (!FUN_10034597(pContext))
+			if (!PageInLightmaps(pContext))
 			{
 				AddDebugMessage(0, "Warning: unable to create lightmap pages.  Lightmapping disabled.");
 				DAT_1005de20 = 0;
@@ -270,28 +270,28 @@ void d3d_RebindLightmaps(RenderContext *pContext)
 
 // guess: Jupiter CD3D_Device::FreeDevice (releases the device and the objects it owns).
 // FUNCTION: D3DREN 0x1001b7e0
-void FUN_1001b7e0()
+void CD3D_Device_FreeDevice()
 {
-	FUN_1001f770();
-	if (DAT_1005de38)
+	d3d_TermTextureManager();
+	if (g_pClipper)
 	{
-		DAT_1005de38->Release();
-		DAT_1005de38 = 0;
+		g_pClipper->Release();
+		g_pClipper = 0;
 	}
 	if (g_pD3DDevice)
 	{
 		g_pD3DDevice->Release();
 		g_pD3DDevice = 0;
 	}
-	if (DAT_10057820)
+	if (g_pZBuffer)
 	{
-		DAT_10057820->Release();
-		DAT_10057820 = 0;
+		g_pZBuffer->Release();
+		g_pZBuffer = 0;
 	}
-	if (DAT_1005de34)
+	if (g_pD3D)
 	{
-		DAT_1005de34->Release();
-		DAT_1005de34 = 0;
+		g_pD3D->Release();
+		g_pD3D = 0;
 	}
 }
 
@@ -305,9 +305,9 @@ void FUN_1001b7e0()
 // FUNCTION: D3DREN 0x1001b840
 void FUN_1001b840()
 {
-	FUN_100235e1();
-	FUN_10018550();
-	FUN_1002cc80();
+	d3d_NullCallback();
+	d3d_TermPolyDrawPools();
+	d3d_NullPreFrameCallback();
 	d3d_TermObjectModules();
 	D3DShadowTextureFactory *pFactory = D3DShadowTextureFactory::Get();
 	if (pFactory)
@@ -317,8 +317,8 @@ void FUN_1001b840()
 // FUNCTION: D3DREN 0x1001b870
 int FUN_1001b870()
 {
-	FUN_100184f0();
-	FUN_1002cc80();
+	d3d_InitPolyDrawPools();
+	d3d_NullPreFrameCallback();
 	d3d_InitObjectModules();
 	new D3DShadowTextureFactory;
 	return 1;
@@ -327,7 +327,7 @@ int FUN_1001b870()
 // ---- RenderStruct slots: 3D frame ----------------------------------------------------------------------------------------
 // guess: RenderStruct+0xc8 slot (the engine header leaves it as m_PadC8): returns 0.
 // FUNCTION: D3DREN 0x1001bd70
-int FUN_1001bd70()
+int d3d_GetInfoFlags()
 {
 	return 0;
 }
@@ -337,11 +337,11 @@ int FUN_1001bd70()
 // FUNCTION: D3DREN 0x1001bd80
 int d3d_Start3D()
 {
-	if (!DAT_1005de40 && g_pD3DDevice)
+	if (!g_bIn3D && g_pD3DDevice)
 	{
 		if (!g_pD3DDevice->BeginScene())
 		{
-			DAT_1005de40 = 1;
+			g_bIn3D = 1;
 			return 1;
 		}
 	}
@@ -352,18 +352,18 @@ int d3d_Start3D()
 // FUNCTION: D3DREN 0x1001bdb0
 int d3d_End3D()
 {
-	if (DAT_1005de40 && g_pD3DDevice)
+	if (g_bIn3D && g_pD3DDevice)
 	{
 		if (g_bInOptimized2D)
 			d3d_EndOptimized2D();
-		DAT_1005de40 = 0;
+		g_bIn3D = 0;
 		if (g_pD3DDevice->EndScene() == DDERR_SURFACELOST)
 		{
-			if (SUCCEEDED(DAT_10057818->Restore()))
+			if (SUCCEEDED(g_pBackBuffer->Restore()))
 			{
 				g_pOffscreen->Restore();
-				DAT_10057820->Restore();
-				FUN_1001f960();
+				g_pZBuffer->Restore();
+				d3d_FreeAllTextures();
 			}
 		}
 		return 1;
@@ -375,7 +375,7 @@ int d3d_End3D()
 // FUNCTION: D3DREN 0x1001be20
 int d3d_IsIn3D()
 {
-	return DAT_1005de40;
+	return g_bIn3D;
 }
 
 // guess: loads a DDGAMMARAMP from a file and applies it (console command "LOADGAMMA <filename>" of d3d_RenderCommand).
@@ -402,12 +402,12 @@ int FUN_1001be30(const char *pFilename)
 
 	if (g_bRunWindowed)
 	{
-		if (DAT_10057814->QueryInterface(IID_IDirectDrawGammaControl, (void **)&pGammaControl) != 0)
+		if (g_pPrimary->QueryInterface(IID_IDirectDrawGammaControl, (void **)&pGammaControl) != 0)
 			return 0;
 	}
 	else
 	{
-		if (DAT_10057818->QueryInterface(IID_IDirectDrawGammaControl, (void **)&pGammaControl) != 0)
+		if (g_pBackBuffer->QueryInterface(IID_IDirectDrawGammaControl, (void **)&pGammaControl) != 0)
 			return 0;
 	}
 	return pGammaControl->SetGammaRamp(0, &ramp) == 0;
@@ -436,7 +436,7 @@ int FUN_1001aa70(RenderStructInit *pInit, GUID guid)
 	memset(bTried, 0, sizeof(bTried));
 	DAT_1005de24 = formats;
 	DAT_1005c99c = &nFormats;
-	if (DAT_1005de34->EnumZBufferFormats(guid, d3d_EnumZBufferFormatsCallback, 0) != 0 || nFormats == 0)
+	if (g_pD3D->EnumZBufferFormats(guid, d3d_EnumZBufferFormatsCallback, 0) != 0 || nFormats == 0)
 	{
 		AddDebugMessage(1, "Unable to find an acceptable z-buffer format.");
 		return 0;
@@ -461,26 +461,26 @@ int FUN_1001aa70(RenderStructInit *pInit, GUID guid)
 		ddsd.dwWidth = pInit->m_Mode.m_Width;
 		ddsd.ddsCaps.dwCaps = DAT_10057828 | DDSCAPS_ZBUFFER;
 		ddsd.ddpfPixelFormat = *pFormat;
-		if (DAT_10057810->CreateSurface(&ddsd, &DAT_10057820, 0) != 0)
+		if (g_pDD->CreateSurface(&ddsd, &g_pZBuffer, 0) != 0)
 		{
 			AddDebugMessage(1, "Failed to make z-buffer.");
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			return 0;
 		}
-		if (g_pOffscreen->AddAttachedSurface(DAT_10057820) < 0)
+		if (g_pOffscreen->AddAttachedSurface(g_pZBuffer) < 0)
 		{
-			DAT_10057820->Release();
+			g_pZBuffer->Release();
 			return 0;
 		}
-		if (DAT_1005de34->CreateDevice(guid, g_pOffscreen, &g_pD3DDevice) >= 0)
+		if (g_pD3D->CreateDevice(guid, g_pOffscreen, &g_pD3DDevice) >= 0)
 		{
 			DAT_1005cdd0 = *pFormat;
 			AddDebugMessage(1, "ZBuffer: Z Mask: %d, Stencil mask: %d", pFormat->dwRGBZBitMask, pFormat->dwStencilBitMask);
 			return 1;
 		}
-		g_pOffscreen->DeleteAttachedSurface(0, DAT_10057820);
-		DAT_10057820->Release();
-		DAT_10057820 = 0;
+		g_pOffscreen->DeleteAttachedSurface(0, g_pZBuffer);
+		g_pZBuffer->Release();
+		g_pZBuffer = 0;
 		bTried[iBest] = 1;
 	}
 	return 0;
@@ -501,13 +501,13 @@ void CheckSpecialCards()
 	DDDEVICEIDENTIFIER2 id;
 	HLTPARAM hParam;
 
-	if (!DAT_10057810 || !g_pStruct)
+	if (!g_pDD || !g_pStruct)
 		return;
 
 	memset(&id, 0, sizeof(id));
 	DAT_1005c810 = 1;
 	DAT_1005c814 = 0;
-	if (DAT_10057810->GetDeviceIdentifier(&id, 0) != 0)
+	if (g_pDD->GetDeviceIdentifier(&id, 0) != 0)
 		return;
 
 	hParam = g_pStruct->GetParameter("ForceMode");
@@ -626,11 +626,11 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 		guid = IID_IDirect3DHALDevice;
 	}
 
-	DAT_10057810 = 0;
-	if (DirectDrawCreateEx(pNode->m_pGuid, (void **)&DAT_10057810, IID_IDirectDraw7, 0) != 0)
+	g_pDD = 0;
+	if (DirectDrawCreateEx(pNode->m_pGuid, (void **)&g_pDD, IID_IDirectDraw7, 0) != 0)
 	{
 		AddDebugMessage(1, "DirectDrawCreateEx failed.");
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		return 0;
 	}
 
@@ -638,27 +638,27 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 	hParam = g_pStruct->GetParameter("NullRender");
 	if (hParam && g_pStruct->GetParameterValueFloat(hParam) != 0.0f)
 		dwCoop |= DDSCL_NOWINDOWCHANGES;
-	if (DAT_10057810->SetCooperativeLevel((HWND)pInit->m_hWnd, dwCoop) != 0)
+	if (g_pDD->SetCooperativeLevel((HWND)pInit->m_hWnd, dwCoop) != 0)
 	{
 		AddDebugMessage(1, "SetCooperativeLevel failed.");
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		return 0;
 	}
 
 	if (!g_bRunWindowed)
 	{
-		if (DAT_10057810->SetDisplayMode(pInit->m_Mode.m_Width, pInit->m_Mode.m_Height, pInit->m_Mode.m_BitDepth, 0, 0) != 0)
+		if (g_pDD->SetDisplayMode(pInit->m_Mode.m_Width, pInit->m_Mode.m_Height, pInit->m_Mode.m_BitDepth, 0, 0) != 0)
 		{
 			AddDebugMessage(1, "SetDisplayMode failed.");
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			return 0;
 		}
 	}
 
-	if (DAT_10057810->QueryInterface(IID_IDirect3D7, (void **)&DAT_1005de34) != 0)
+	if (g_pDD->QueryInterface(IID_IDirect3D7, (void **)&g_pD3D) != 0)
 	{
 		AddDebugMessage(1, "QueryInterface(IID_IDirect3D7) failed.");
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		return 0;
 	}
 
@@ -669,29 +669,29 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 		ddsd.dwFlags = DDSD_CAPS | DDSD_BACKBUFFERCOUNT;
 		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_FLIP | DDSCAPS_COMPLEX | DDSCAPS_3DDEVICE;
 		ddsd.dwBackBufferCount = (DAT_10058478 != 0) + 1;
-		if (DAT_10057810->CreateSurface(&ddsd, &DAT_10057818, 0) != 0)
+		if (g_pDD->CreateSurface(&ddsd, &g_pBackBuffer, 0) != 0)
 		{
 			if (ddsd.dwBackBufferCount != 2)
 			{
 				AddDebugMessage(1, "Unable to create a primary surface.");
-				FUN_10010a69();
+				d3d_FreeDDraw();
 				return 0;
 			}
 			AddDebugMessage(0, "Unable to use triple buffering.");
 			ddsd.dwBackBufferCount = 1;
-			if (DAT_10057810->CreateSurface(&ddsd, &DAT_10057818, 0) != 0)
+			if (g_pDD->CreateSurface(&ddsd, &g_pBackBuffer, 0) != 0)
 			{
 				AddDebugMessage(1, "Unable to create a primary surface.");
-				FUN_10010a69();
+				d3d_FreeDDraw();
 				return 0;
 			}
 		}
 		g_pOffscreen = 0;
-		DAT_10057818->EnumAttachedSurfaces(0, d3d_EnumAttachedSurfacesCallback);
+		g_pBackBuffer->EnumAttachedSurfaces(0, d3d_EnumAttachedSurfacesCallback);
 		if (!g_pOffscreen)
 		{
 			AddDebugMessage(1, "Couldn't get pointer to offscreen surface.");
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			return 0;
 		}
 	}
@@ -701,10 +701,10 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 		ddsd.dwSize = sizeof(ddsd);
 		ddsd.dwFlags = DDSD_CAPS;
 		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
-		if (DAT_10057810->CreateSurface(&ddsd, &DAT_10057814, 0) != 0)
+		if (g_pDD->CreateSurface(&ddsd, &g_pPrimary, 0) != 0)
 		{
 			AddDebugMessage(1, "Unable to create a primary surface.");
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			return 0;
 		}
 
@@ -714,17 +714,17 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 		ddsd.ddsCaps.dwCaps = DAT_10057828 | DDSCAPS_3DDEVICE;
 		ddsd.dwSize = sizeof(ddsd);
-		if (DAT_10057810->CreateSurface(&ddsd, &DAT_10057818, 0) != 0)
+		if (g_pDD->CreateSurface(&ddsd, &g_pBackBuffer, 0) != 0)
 		{
 			AddDebugMessage(1, "Failed to make rendering surface.");
-			FUN_10010a69();
+			d3d_FreeDDraw();
 			return 0;
 		}
-		g_pOffscreen = DAT_10057818;
-		if (DAT_10057810->CreateClipper(0, &DAT_1005de38, 0) == 0)
+		g_pOffscreen = g_pBackBuffer;
+		if (g_pDD->CreateClipper(0, &g_pClipper, 0) == 0)
 		{
-			DAT_1005de38->SetHWnd(0, (HWND)pInit->m_hWnd);
-			DAT_10057814->SetClipper(DAT_1005de38);
+			g_pClipper->SetHWnd(0, (HWND)pInit->m_hWnd);
+			g_pPrimary->SetClipper(g_pClipper);
 		}
 	}
 
@@ -733,13 +733,13 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 	for (i = 4; i; i--)
 	{
 		g_pOffscreen->Blt(0, 0, 0, DDBLT_COLORFILL | DDBLT_WAIT, &bltfx);
-		DAT_10057818->Flip(0, DDFLIP_WAIT);
+		g_pBackBuffer->Flip(0, DDFLIP_WAIT);
 	}
 
 	if (!FUN_1001aa70(pInit, guid))
 	{
 		AddDebugMessage(1, "Failed to create device.");
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		DAT_10058494 = 0;
 		return 0;
 	}
@@ -754,7 +754,7 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 	if (g_pD3DDevice->SetViewport(&vp) != 0)
 	{
 		AddDebugMessage(1, "IDirect3DDevice::SetCurrentViewport failed.");
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		return 0;
 	}
 
@@ -762,7 +762,7 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 	memset(&ddcapsHal, 0, sizeof(ddcapsHal));
 	ddcapsHal.dwSize = sizeof(DDCAPS);
 	ddcapsHel.dwSize = sizeof(DDCAPS);
-	DAT_10057810->GetCaps(&ddcapsHal, &ddcapsHel);
+	g_pDD->GetCaps(&ddcapsHal, &ddcapsHel);
 	DAT_1005c874 = (ddcapsHal.dwCaps2 >> 12) & 1;
 
 	memset(&desc, 0, sizeof(desc));
@@ -774,10 +774,10 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 
 		memset(&caps, 0, sizeof(caps));
 		caps.dwCaps = DDSCAPS_TEXTURE;
-		DAT_10057810->GetAvailableVidMem(&caps, &dwTotalTex, &dwFreeTex);
+		g_pDD->GetAvailableVidMem(&caps, &dwTotalTex, &dwFreeTex);
 		memset(&caps, 0, sizeof(caps));
 		caps.dwCaps = DDSCAPS_VIDEOMEMORY;
-		DAT_10057810->GetAvailableVidMem(&caps, &dwTotalVid, &dwFreeVid);
+		g_pDD->GetAvailableVidMem(&caps, &dwTotalVid, &dwFreeVid);
 
 		DAT_1005c854 = (desc.dwDevCaps >> 10) & 1;
 		DAT_1005c858 = (desc.dwDevCaps >> 9) & 1;
@@ -888,7 +888,7 @@ int FUN_1001acc0(UnkType_DeviceNode *pNode, RenderStructInit *pInit)
 	FUN_1001be30("lithtech.gam");
 	if (!FUN_1001ec50())
 	{
-		FUN_10010a69();
+		d3d_FreeDDraw();
 		return 0;
 	}
 	DAT_1005de1c = 0.5f;
@@ -911,21 +911,21 @@ void d3d_RenderCommand(int argc, char **argv)
 	{
 		if (_strcmpi(argv[0], "LISTDEVICES") == 0)
 		{
-			FUN_10010998();
+			d3d_ListDevices();
 			return;
 		}
 		if (_strcmpi(argv[0], "LISTTEXTUREFORMATS") == 0)
 		{
-			FUN_1001f9b0();
+			d3d_ListTextureFormats();
 			return;
 		}
 		if (_strcmpi(argv[0], "LISTDEVICECAPS") == 0)
 		{
-			if (DAT_10057810)
+			if (g_pDD)
 			{
 				DDDEVICEIDENTIFIER2 id;
 				memset(&id, 0, sizeof(id));
-				if (DAT_10057810->GetDeviceIdentifier(&id, 0) == 0)
+				if (g_pDD->GetDeviceIdentifier(&id, 0) == 0)
 				{
 					g_pStruct->ConsolePrint("---------------------------------------------------------------");
 					g_pStruct->ConsolePrint("Driver: %s", id.szDriver);
@@ -959,7 +959,7 @@ void d3d_RenderCommand(int argc, char **argv)
 		}
 		if (_strcmpi(argv[0], "FREETEXTURES") == 0)
 		{
-			FUN_1001f960();
+			d3d_FreeAllTextures();
 			return;
 		}
 		if (_strcmpi(argv[0], "LOADGAMMA") == 0)
@@ -979,7 +979,7 @@ void d3d_RenderCommand(int argc, char **argv)
 				FUN_1002d07c(argv[1]);
 				return;
 			}
-			FUN_100235e1();
+			d3d_NullCallback();
 		}
 	}
 }

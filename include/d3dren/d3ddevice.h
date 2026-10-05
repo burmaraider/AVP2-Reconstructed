@@ -25,15 +25,15 @@
 
 // ---- DirectDraw 7 objects (created by 0x1001acc0) -------------------------------------------------------------------------
 // GLOBAL: D3DREN 0x10057810
-extern IDirectDraw7 *DAT_10057810;			// DirectDrawCreateEx(guid, &it, IID_IDirectDraw7): GetHook("LPDIRECTDRAW")
+extern IDirectDraw7 *g_pDD;			// DirectDrawCreateEx(guid, &it, IID_IDirectDraw7): GetHook("LPDIRECTDRAW")
 // GLOBAL: D3DREN 0x10057814
-extern IDirectDrawSurface7 *DAT_10057814;	// windowed: the primary surface (Blt, SetClipper); fullscreen: NULL
+extern IDirectDrawSurface7 *g_pPrimary;	// windowed: the primary surface (Blt, SetClipper); fullscreen: NULL
 // GLOBAL: D3DREN 0x10057818
-extern IDirectDrawSurface7 *DAT_10057818;	// windowed: the offscreen render target (== g_pOffscreen); fullscreen: the flipping primary
+extern IDirectDrawSurface7 *g_pBackBuffer;	// windowed: the offscreen render target (== g_pOffscreen); fullscreen: the flipping primary
 // GLOBAL: D3DREN 0x1005781c
 extern IDirectDrawSurface7 *g_pOffscreen;	// the surface the device renders to (Ghidra/ScreenShot string name)
 // GLOBAL: D3DREN 0x10057820
-extern IDirectDrawSurface7 *DAT_10057820;	// the z-buffer surface (made by 0x1001aa70, attached to g_pOffscreen)
+extern IDirectDrawSurface7 *g_pZBuffer;	// the z-buffer surface (made by 0x1001aa70, attached to g_pOffscreen)
 // GLOBAL: D3DREN 0x10057828
 extern uint32 DAT_10057828;					// DDSCAPS memory flag of the render surfaces (0 = default, 0x800 DDSCAPS_SYSTEMMEMORY)
 
@@ -41,16 +41,16 @@ extern uint32 DAT_10057828;					// DDSCAPS memory flag of the render surfaces (0
 // GLOBAL: D3DREN 0x1005de30
 extern IDirect3DDevice7 *g_pD3DDevice;		// the device: BeginScene +0x14, SetRenderState +0x50, SetTexture +0x8c, SetTextureStageState +0x94, ...
 // GLOBAL: D3DREN 0x1005de34
-extern IDirect3D7 *DAT_1005de34;			// QueryInterface(IID_IDirect3D7) result
+extern IDirect3D7 *g_pD3D;			// QueryInterface(IID_IDirect3D7) result
 // GLOBAL: D3DREN 0x1005de38
-extern IDirectDrawClipper *DAT_1005de38;	// windowed-mode clipper
+extern IDirectDrawClipper *g_pClipper;	// windowed-mode clipper
 
 // GLOBAL: D3DREN 0x1005de28
 extern uint32 g_NormalTextureStage;			// texture stage of the normal (base) texture; 0 after device creation
 
 // ---- state flags --------------------------------------------------------------------------------------------------------
 // GLOBAL: D3DREN 0x1005de40
-extern int DAT_1005de40;					// guess: g_bIn3D (Start3D set / End3D clear; Jupiter CD3D_Device::m_bIn3D)
+extern int g_bIn3D;					// guess: g_bIn3D (Start3D set / End3D clear; Jupiter CD3D_Device::m_bIn3D)
 // GLOBAL: D3DREN 0x1005de44
 extern int g_bInOptimized2D;				// Jupiter d3d_init.cpp name (Ghidra)
 // GLOBAL: D3DREN 0x1005de48

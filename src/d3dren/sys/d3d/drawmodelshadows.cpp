@@ -203,7 +203,7 @@ void ModelDraw::FUN_10025078(ShadowLightInfo *pInfo, WorldPoly *pPoly)
 }
 
 // 0x1006287c: data of another unit
-extern IDirectDrawSurface7 *DAT_1006287c;
+extern IDirectDrawSurface7 *g_pShadowBlobTexture;
 
 // Not matching: 27 of 3395 bytes (31 aligned instruction mismatches).  Same size, same instruction sequence (1052), same call sequence
 // (19 out-of-line LTVector constructors, Cross x5, Norm x6, Dot x4, operator- x1, LTMatrix::Init x2, LTMatrix::operator* x2), same frame
@@ -252,7 +252,7 @@ void ModelDraw::DrawModelShadows()
 	if (nShadows == 0)
 		return;
 
-	if (!DAT_1005c810 || !DAT_1006287c || !m_pModel->m_bShadowEnable)
+	if (!DAT_1005c810 || !g_pShadowBlobTexture || !m_pModel->m_bShadowEnable)
 		return;
 
 	if (g_CV_ModelShadowProj.m_IntVal)
@@ -300,7 +300,7 @@ void ModelDraw::DrawModelShadows()
 
 	{
 	g_pD3DDevice->GetTexture(0, &pOldTexture);
-	g_pD3DDevice->SetTexture(0, DAT_1006287c);
+	g_pD3DDevice->SetTexture(0, g_pShadowBlobTexture);
 	StateSet alphaBlend(D3DRENDERSTATE_ALPHABLENDENABLE, 1);
 	StateSet zWrite(D3DRENDERSTATE_ZWRITEENABLE, 0);
 

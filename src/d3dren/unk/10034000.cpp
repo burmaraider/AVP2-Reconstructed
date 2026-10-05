@@ -36,7 +36,7 @@
 #include "world_tree.h"
 
 // guess: the texture format table entry of the lightmap pages (W8's unit sys/d3d/d3d_texture); 0 when there is none.
-UnkType_TextureFormat *FUN_1001e730();
+TextureFormat *d3d_GetLightmapTextureFormat();
 
 // Counters of the lightmap page code (cleared by FUN_10034597): texture memory of the pages, texels assigned, (unused).
 // GLOBAL: D3DREN 0x100796e8
@@ -125,14 +125,14 @@ LightmapPage *FUN_10034142(RenderContext *pContext)
 		return 0;
 	}
 
-	UnkType_TextureFormat *pFormat = FUN_1001e730();
+	TextureFormat *pFormat = d3d_GetLightmapTextureFormat();
 	if (!pFormat)
 	{
 		dfree(pPage);
 		return 0;
 	}
 
-	pPage->m_nMemoryUse = pFormat->m_Unk30 << 12;
+	pPage->m_nMemoryUse = pFormat->m_BytesPP << 12;
 
 	DDSURFACEDESC2 ddsd;
 	memset(&ddsd, 0, sizeof(ddsd));
@@ -143,9 +143,9 @@ LightmapPage *FUN_10034142(RenderContext *pContext)
 	ddsd.ddsCaps.dwCaps2 = DDSCAPS2_DONOTPERSIST | DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;
 	ddsd.dwWidth = 0x40;
 	ddsd.dwHeight = 0x40;
-	memcpy(&ddsd.ddpfPixelFormat, &pFormat->m_DDPF, sizeof(DDPIXELFORMAT));
+	memcpy(&ddsd.ddpfPixelFormat, &pFormat->m_PF, sizeof(DDPIXELFORMAT));
 
-	if (DAT_10057810->CreateSurface(&ddsd, (LPDIRECTDRAWSURFACE7 *)&pPage->m_pSurface, NULL) != DD_OK)
+	if (g_pDD->CreateSurface(&ddsd, (LPDIRECTDRAWSURFACE7 *)&pPage->m_pSurface, NULL) != DD_OK)
 	{
 		dfree(pPage->m_pOccupancyMap);
 		dfree(pPage);
@@ -367,7 +367,7 @@ void FUN_10034543(WorldBsp *pBsp)
 // one counter for both loops); remaining differences are the placement of the query-record construction (exe stores the leaf pointer
 // from `m_Leafs + offset` before DAT_1007aaf4) and the tail of the two loops (the exe tests the poly flag with a jne/jmp pair).
 // STUB: D3DREN 0x10034597
-int FUN_10034597(RenderContext *pContext)
+int PageInLightmaps(RenderContext *pContext)
 {
 	MainWorld *pWorld = pContext->m_pWorld;
 	uint32 i, j;

@@ -37,15 +37,15 @@ extern int DAT_10055cdc;
 // (renderstruct.h declares one parameter).
 typedef TextureData *(*PFN_GetTexture2)(SharedTexture *pTexture, uint32 *pUnused);
 #define FUN_GetTextureData(pTexture, pUnused)	(((PFN_GetTexture2)g_pStruct->GetTexture)((pTexture), (pUnused)))
-IDirectDrawSurface7 *FUN_1001e9f0(uint32 *pPixels, uint32 width, uint32 height, uint32 pitch);
+IDirectDrawSurface7 *d3d_CreateTextureFromPixels(uint32 *pPixels, uint32 width, uint32 height, uint32 pitch);
 void DDPFToPFormat(DDPIXELFORMAT *pDDPF, PFormat *pFormat);	// 0x100109fd (the engine's cutil.cpp copy)
 
 // ---- globals defined by this object -----------------------------------------------------------------------------------------
 
-// guess: the list of the enumerated texture formats (UnkType_TextureFormat::m_Link); Jupiter keeps no such list.
+// guess: the list of the enumerated texture formats (TextureFormat::m_Link); Jupiter keeps no such list.
 // FUNCTION: D3DREN 0x1001e5a0 _$E2
 // GLOBAL: D3DREN 0x10062858
-LTLink DAT_10062858(LTLink_Init);
+LTLink g_TextureFormatList(LTLink_Init);
 // guess: an LTList (count at 0x100613a8, head at 0x100613ac) that the texture manager Init clears; nothing in this unit uses it.
 // FUNCTION: D3DREN 0x1001e5b0 _$E5
 // GLOBAL: D3DREN 0x100613a8
@@ -54,7 +54,7 @@ LTList DAT_100613a8(LTLink_Init);
 // FUNCTION: D3DREN 0x1001e5d0 _$E10
 // FUNCTION: D3DREN 0x1001e600 _$E8
 // GLOBAL: D3DREN 0x100617e8
-ObjectBank<RTexture, NullCS> DAT_100617e8;
+ObjectBank<RTexture, NullCS> g_RTextureBank;
 // FUNCTION: D3DREN 0x1001e630 ??_GBaseObjectBank@@UAEPAXI@Z
 // NAME: g_Textures: Jupiter d3d_texture.cpp DECLARE_LTLINK(g_Textures) (names_proposal.csv, high)
 // FUNCTION: D3DREN 0x1001e650 _$E13
@@ -65,18 +65,18 @@ FormatMgr g_FormatMgr;
 // FUNCTION: D3DREN 0x1001e670 _$E19
 ConVar g_CV_S3TCEnable("S3TCEnable", 1.0f);
 
-UnkType_TextureFormat *DAT_10062830[NUM_TEXTUREFORMATS];
+TextureFormat *g_TextureFormats[NUM_TEXTUREFORMATS];
 // guess: the exponent of the shadow blob alpha falloff (FUN_1001f670): an initialised float of this object (.data, 0x1004b5d8).
 // GLOBAL: D3DREN 0x1004b5d8
 float DAT_1004b5d8 = 3.0f;
 int DAT_10062854;
 int DAT_10062850;
 int DAT_1006284c;
-int DAT_10062874;
+int g_bTextureManagerInitialized;
 IDirectDrawSurface7 *DAT_10062878;
-IDirectDrawSurface7 *DAT_1006287c;
-IDirectDrawSurface7 *DAT_10062880;
-float DAT_10062884;
+IDirectDrawSurface7 *g_pShadowBlobTexture;
+IDirectDrawSurface7 *g_pSpecularTexture;
+float g_fSpecularTexturePower;
 
 // FUNCTION: D3DREN 0x1001e690
 RTexture::RTexture()
@@ -125,14 +125,14 @@ int RTextureData::GetBaseHeight()
 
 // NAME: names_proposal.csv guess_GetLightmapTextureFormat (low, invented): not used
 // FUNCTION: D3DREN 0x1001e730
-UnkType_TextureFormat *FUN_1001e730()
+TextureFormat *d3d_GetLightmapTextureFormat()
 {
-	if (DAT_10057f74)
+	if (g_b32BitLightmaps)
 	{
-		if (DAT_10062830[FORMAT_32BIT])
-			return DAT_10062830[FORMAT_32BIT];
+		if (g_TextureFormats[FORMAT_32BIT])
+			return g_TextureFormats[FORMAT_32BIT];
 	}
-	return DAT_10062830[FORMAT_LIGHTMAP];
+	return g_TextureFormats[FORMAT_LIGHTMAP];
 }
 
 // Creates a lightmap page texture surface (the DirectDraw surface in the lightmap format, DDSD_TEXTURESTAGE for one-pass lightmapping)
@@ -143,16 +143,16 @@ UnkType_TextureFormat *FUN_1001e730()
 // (1) the block layout of the exits: the exe emits the three `return 0` exits with their own epilogues, the first one inline right
 // behind the format test (`jne` over it), ours jumps from the first two to one shared epilogue and then lays the body out
 // behind it; (2) the register assignment: the exe keeps width in ebp (and re-reads height from its argument slot), ours keeps height.
-// Tried: the order of the ddsd stores, the format test as one condition / three ifs / the inline FUN_1001e730, none changes either.
+// Tried: the order of the ddsd stores, the format test as one condition / three ifs / the inline d3d_GetLightmapTextureFormat, none changes either.
 // STUB: D3DREN 0x1001e750
 RTexture *FUN_1001e750(uint32 width, uint32 height, uint32 flags)
 {
-	UnkType_TextureFormat *pFormat;
+	TextureFormat *pFormat;
 	DDSURFACEDESC2 ddsd;
 	IDirectDrawSurface7 *pSurface;
 	RTexture *pRTexture;
 
-	if ((!DAT_10057f74 || !(pFormat = DAT_10062830[FORMAT_32BIT])) && !(pFormat = DAT_10062830[FORMAT_LIGHTMAP]))
+	if ((!g_b32BitLightmaps || !(pFormat = g_TextureFormats[FORMAT_32BIT])) && !(pFormat = g_TextureFormats[FORMAT_LIGHTMAP]))
 		return 0;
 
 	memset(&ddsd, 0, sizeof(ddsd));
@@ -162,11 +162,11 @@ RTexture *FUN_1001e750(uint32 width, uint32 height, uint32 flags)
 	ddsd.dwSize = sizeof(ddsd);
 	ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_TEXTURESTAGE;
 	ddsd.dwWidth = width;
-	ddsd.ddpfPixelFormat = pFormat->m_DDPF;
-	if (DAT_10057810->CreateSurface(&ddsd, &pSurface, 0) != 0)
+	ddsd.ddpfPixelFormat = pFormat->m_PF;
+	if (g_pDD->CreateSurface(&ddsd, &pSurface, 0) != 0)
 		return 0;
 
-	pRTexture = DAT_100617e8.Allocate();
+	pRTexture = g_RTextureBank.Allocate();
 	if (pRTexture)
 	{
 		pRTexture->m_Data.m_pOwner = pRTexture;
@@ -191,17 +191,17 @@ RTexture *FUN_1001e750(uint32 width, uint32 height, uint32 flags)
 // Builds the 64x64 grey lookup table texture of the specular power fPower (a diagonal band of pow(i / 64, fPower) * 255) once.
 // NAME: names_proposal.csv guess_BuildSpecularLookupTexture (low, invented): not used
 // FUNCTION: D3DREN 0x1001e910
-void FUN_1001e910(float fPower)
+void d3d_BuildSpecularLookupTexture(float fPower)
 {
 	uint32 pixels[64 * 64];
 
-	if (DAT_10062884 != fPower)
+	if (g_fSpecularTexturePower != fPower)
 	{
-		DAT_10062884 = fPower;
-		if (DAT_10062880)
+		g_fSpecularTexturePower = fPower;
+		if (g_pSpecularTexture)
 		{
-			DAT_10062880->Release();
-			DAT_10062880 = 0;
+			g_pSpecularTexture->Release();
+			g_pSpecularTexture = 0;
 		}
 		memset(pixels, 0, sizeof(pixels));
 		for (uint32 i = 0; i < 64; i++)
@@ -215,19 +215,19 @@ void FUN_1001e910(float fPower)
 				pixels[i * 65 - 1] = c;
 			}
 		}
-		DAT_10062880 = FUN_1001e9f0(pixels, 64, 64, 256);
+		g_pSpecularTexture = d3d_CreateTextureFromPixels(pixels, 64, 64, 256);
 	}
 }
 
 // Creates a texture surface (32 bit, else 4444 format) from a block of ARGB pixels, converted by the format manager.
 // NAME: names_proposal.csv guess_CreateTextureFromPixels (low, invented): not used
 // FUNCTION: D3DREN 0x1001e9f0
-IDirectDrawSurface7 *FUN_1001e9f0(uint32 *pPixels, uint32 width, uint32 height, uint32 pitch)
+IDirectDrawSurface7 *d3d_CreateTextureFromPixels(uint32 *pPixels, uint32 width, uint32 height, uint32 pitch)
 {
 	FMConvertRequest cRequest;
-	UnkType_TextureFormat *pFormat = DAT_10062830[FORMAT_32BIT];
+	TextureFormat *pFormat = g_TextureFormats[FORMAT_32BIT];
 	if (!pFormat)
-		pFormat = DAT_10062830[FORMAT_4444];
+		pFormat = g_TextureFormats[FORMAT_4444];
 	if (pFormat)
 	{
 		DDSURFACEDESC2 ddsd;
@@ -242,7 +242,7 @@ IDirectDrawSurface7 *FUN_1001e9f0(uint32 *pPixels, uint32 width, uint32 height, 
 		ddsd.dwWidth = width;
 		ddsd.dwHeight = height;
 		ddsd.ddpfPixelFormat = pFormat->m_DDPF;
-		if (DAT_10057810->CreateSurface(&ddsd, &pSurface, 0) == 0)
+		if (g_pDD->CreateSurface(&ddsd, &pSurface, 0) == 0)
 		{
 			memset(&ddsdLock, 0, sizeof(ddsdLock));
 			ddsdLock.dwSize = sizeof(ddsdLock);
@@ -269,9 +269,9 @@ IDirectDrawSurface7 *FUN_1001e9f0(uint32 *pPixels, uint32 width, uint32 height, 
 // Re-creates the lightmap texture pools and the 0x20x0x20 lightmap format dummy surface.
 // NAME: names_proposal.csv guess_ReinitLightmapTextureSupport (low, invented): not used
 // FUNCTION: D3DREN 0x1001eb80
-void FUN_1001eb80()
+void d3d_ReinitLightmapTextureSupport()
 {
-	UnkType_TextureFormat *pFormat;
+	TextureFormat *pFormat;
 	DDSURFACEDESC2 ddsd;
 
 	if (DAT_10062878)
@@ -286,7 +286,7 @@ void FUN_1001eb80()
 		DAT_10062878->Release();
 		DAT_10062878 = 0;
 	}
-	if ((DAT_10057f74 && (pFormat = DAT_10062830[FORMAT_32BIT])) || (pFormat = DAT_10062830[FORMAT_LIGHTMAP]))
+	if ((g_b32BitLightmaps && (pFormat = g_TextureFormats[FORMAT_32BIT])) || (pFormat = g_TextureFormats[FORMAT_LIGHTMAP]))
 	{
 		memset(&ddsd, 0, sizeof(ddsd));
 		ddsd.dwHeight = 0x20;
@@ -295,7 +295,7 @@ void FUN_1001eb80()
 		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
 		ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 		ddsd.ddpfPixelFormat = pFormat->m_DDPF;
-		DAT_10057810->CreateSurface(&ddsd, &DAT_10062878, 0);
+		g_pDD->CreateSurface(&ddsd, &DAT_10062878, 0);
 	}
 }
 
@@ -310,66 +310,66 @@ void FUN_1001eb80()
 // STUB: D3DREN 0x1001ec50
 int FUN_1001ec50()
 {
-	memset(DAT_10062830, 0, sizeof(DAT_10062830));
+	memset(g_TextureFormats, 0, sizeof(g_TextureFormats));
 	g_pBoundTextures[0] = 0;
 	g_pBoundTextures[1] = 0;
 	DAT_100613a8.m_nElements = 0;
 	g_pBoundTextures[2] = 0;
 	g_pBoundTextures[3] = 0;
-	DAT_10062858.TieOff();
+	g_TextureFormatList.TieOff();
 	DAT_100613a8.m_Head.TieOff();
 	g_Textures.TieOff();
 	DAT_1007abe4.FUN_10034e3d();
-	DAT_100617e8.Init(0x40, 0);
-	DAT_10062874 = 1;
+	g_RTextureBank.Init(0x40, 0);
+	g_bTextureManagerInitialized = 1;
 	g_pD3DDevice->EnumTextureFormats(FUN_1001f0d0, 0);
 
 	// The wanted formats (bits of red, green, blue, alpha; one of these DDPF_ flags; none of these) in the order of preference.
-	UnkType_TextureFormatSpec spec32[1] = { { 8, 8, 8, 8, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
-	UnkType_TextureFormatSpec specBump[1] = { { 8, 8, 0, 0, DDPF_BUMPDUDV, DDPF_LUMINANCE } };
-	UnkType_TextureFormatSpec spec4444[2] = { { 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
-	UnkType_TextureFormatSpec specInterface[2] = { { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE | DDPF_PALETTEINDEXED8 },
+	TextureFormatSpec spec32[1] = { { 8, 8, 8, 8, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
+	TextureFormatSpec specBump[1] = { { 8, 8, 0, 0, DDPF_BUMPDUDV, DDPF_LUMINANCE } };
+	TextureFormatSpec spec4444[2] = { { 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
+	TextureFormatSpec specInterface[2] = { { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE | DDPF_PALETTEINDEXED8 },
 		{ 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE | DDPF_PALETTEINDEXED8 } };
-	UnkType_TextureFormatSpec specLightmap[2] = { { 5, 5, 5, 0, DDPF_RGB, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
-	UnkType_TextureFormatSpec specFullbrite[2] = { { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE }, { 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
-	UnkType_TextureFormatSpec specNormal[3] = { { 5, 6, 5, 0, DDPF_RGB, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE },
+	TextureFormatSpec specLightmap[2] = { { 5, 5, 5, 0, DDPF_RGB, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
+	TextureFormatSpec specFullbrite[2] = { { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE }, { 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
+	TextureFormatSpec specNormal[3] = { { 5, 6, 5, 0, DDPF_RGB, DDPF_LUMINANCE }, { 5, 5, 5, 1, DDPF_ALPHAPIXELS, DDPF_LUMINANCE },
 		{ 4, 4, 4, 4, DDPF_ALPHAPIXELS, DDPF_LUMINANCE } };
 
-	DAT_10062830[FORMAT_32BIT] = FUN_1001f590(spec32, 1);
-	DAT_10062830[FORMAT_FULLBRITE] = FUN_1001f590(specFullbrite, 2);
-	if (!DAT_10062830[FORMAT_FULLBRITE])
+	g_TextureFormats[FORMAT_32BIT] = FUN_1001f590(spec32, 1);
+	g_TextureFormats[FORMAT_FULLBRITE] = FUN_1001f590(specFullbrite, 2);
+	if (!g_TextureFormats[FORMAT_FULLBRITE])
 	{
 		AddDebugMessage(0, "FORMAT_FULLBRITE texture format missing.");
 		return 0;
 	}
-	DAT_10062830[FORMAT_4444] = FUN_1001f590(spec4444, 2);
-	if (!DAT_10062830[FORMAT_4444])
+	g_TextureFormats[FORMAT_4444] = FUN_1001f590(spec4444, 2);
+	if (!g_TextureFormats[FORMAT_4444])
 	{
 		AddDebugMessage(0, "FORMAT_4444 texture format missing.");
 		return 0;
 	}
-	DAT_10062830[FORMAT_NORMAL] = FUN_1001f590(specNormal, 3);
-	if (!DAT_10062830[FORMAT_NORMAL])
+	g_TextureFormats[FORMAT_NORMAL] = FUN_1001f590(specNormal, 3);
+	if (!g_TextureFormats[FORMAT_NORMAL])
 	{
 		AddDebugMessage(0, "FORMAT_NORMAL texture format missing.");
 		return 0;
 	}
-	DAT_10062830[FORMAT_INTERFACE] = FUN_1001f590(specInterface, 2);
-	if (!DAT_10062830[FORMAT_INTERFACE])
+	g_TextureFormats[FORMAT_INTERFACE] = FUN_1001f590(specInterface, 2);
+	if (!g_TextureFormats[FORMAT_INTERFACE])
 	{
 		AddDebugMessage(0, "FORMAT_INTERFACE texture format missing.");
 		return 0;
 	}
-	DAT_10062830[FORMAT_LIGHTMAP] = FUN_1001f590(specLightmap, 2);
-	if (!DAT_10062830[FORMAT_LIGHTMAP])
+	g_TextureFormats[FORMAT_LIGHTMAP] = FUN_1001f590(specLightmap, 2);
+	if (!g_TextureFormats[FORMAT_LIGHTMAP])
 	{
 		AddDebugMessage(0, "Warning: device not lightmap capable.");
 		DAT_1005de20 = 0;
 	}
-	DAT_10062830[FORMAT_BUMPMAP] = FUN_1001f590(specBump, 1);
+	g_TextureFormats[FORMAT_BUMPMAP] = FUN_1001f590(specBump, 1);
 	FUN_1001f600();
 	{
-		UnkType_TextureFormat *pLightmapFormat;
+		TextureFormat *pLightmapFormat;
 		DDSURFACEDESC2 ddsd;
 
 		if (DAT_10062878)
@@ -384,7 +384,7 @@ int FUN_1001ec50()
 			DAT_10062878->Release();
 			DAT_10062878 = 0;
 		}
-		if ((DAT_10057f74 && (pLightmapFormat = DAT_10062830[FORMAT_32BIT])) || (pLightmapFormat = DAT_10062830[FORMAT_LIGHTMAP]))
+		if ((g_b32BitLightmaps && (pLightmapFormat = g_TextureFormats[FORMAT_32BIT])) || (pLightmapFormat = g_TextureFormats[FORMAT_LIGHTMAP]))
 		{
 			memset(&ddsd, 0, sizeof(ddsd));
 			ddsd.dwHeight = 0x20;
@@ -393,12 +393,12 @@ int FUN_1001ec50()
 			ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
 			ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 			ddsd.ddpfPixelFormat = pLightmapFormat->m_DDPF;
-			DAT_10057810->CreateSurface(&ddsd, &DAT_10062878, 0);
+			g_pDD->CreateSurface(&ddsd, &DAT_10062878, 0);
 		}
 	}
 	FUN_10032a30();
 	FUN_1001f670();
-	FUN_1001e910(5.0f);
+	d3d_BuildSpecularLookupTexture(5.0f);
 	return 1;
 }
 
@@ -450,7 +450,7 @@ static void FUN_CalcShift(uint32 refMask, uint32 mask, int *pRight, int *pLeft)
 
 
 
-// IDirect3DDevice7::EnumTextureFormats callback: records every enumerated pixel format in the list DAT_10062858 with its bit counts
+// IDirect3DDevice7::EnumTextureFormats callback: records every enumerated pixel format in the list g_TextureFormatList with its bit counts
 // and the channel shifts for the conversion routines.
 // NAME: d3d_EnumTextureFormatsCallback: names_proposal.csv (medium, LPD3DENUMPIXELFORMATSCALLBACK shape)
 // NOT MATCHING (1152 vs 1136 bytes): same statements and order as the exe.  FUN_1001f540 (the bit range of a mask; its out-of-line copy
@@ -464,7 +464,7 @@ static void FUN_CalcShift(uint32 refMask, uint32 mask, int *pRight, int *pLeft)
 // STUB: D3DREN 0x1001f0d0
 HRESULT WINAPI FUN_1001f0d0(LPDDPIXELFORMAT pFormat, LPVOID pContext)
 {
-	UnkType_TextureFormat *pNode = (UnkType_TextureFormat *)dalloc(sizeof(UnkType_TextureFormat));
+	TextureFormat *pNode = (TextureFormat *)dalloc(sizeof(TextureFormat));
 	if (pNode)
 	{
 		pNode->m_DDPF = *pFormat;
@@ -505,7 +505,7 @@ HRESULT WINAPI FUN_1001f0d0(LPDDPIXELFORMAT pFormat, LPVOID pContext)
 		pNode->m_Unka0 = pFormat->dwRBitMask == 0xf800 && pFormat->dwGBitMask == 0x7e0 && pFormat->dwBBitMask == 0x1f &&
 			pFormat->dwRGBAlphaBitMask == 0;
 		pNode->m_Link.m_pData = pNode;
-		dl_Insert(&DAT_10062858, &pNode->m_Link);
+		dl_Insert(&g_TextureFormatList, &pNode->m_Link);
 		return D3DENUMRET_OK;
 	}
 	return D3DENUMRET_OK;
@@ -516,17 +516,17 @@ HRESULT WINAPI FUN_1001f0d0(LPDDPIXELFORMAT pFormat, LPVOID pContext)
 // Finds the first enumerated texture format that matches one of the nSpecs wanted formats (bits per colour channel, flags).
 // NAME: names_proposal.csv guess_FindTextureFormat (low, invented): not used
 // FUNCTION: D3DREN 0x1001f590
-UnkType_TextureFormat *FUN_1001f590(const UnkType_TextureFormatSpec *pSpecs, uint32 nSpecs)
+TextureFormat *FUN_1001f590(const TextureFormatSpec *pSpecs, uint32 nSpecs)
 {
 	for (uint32 i = 0; i < nSpecs; i++)
 	{
-		for (LTLink *pCur = DAT_10062858.m_pNext; pCur != &DAT_10062858; pCur = pCur->m_pNext)
+		for (LTLink *pCur = g_TextureFormatList.m_pNext; pCur != &g_TextureFormatList; pCur = pCur->m_pNext)
 		{
-			UnkType_TextureFormat *pFormat = (UnkType_TextureFormat *)pCur->m_pData;
-			if (pFormat->m_Unk34 == pSpecs[i].m_nBitsR && pFormat->m_Unk38 == pSpecs[i].m_nBitsG &&
-				pFormat->m_Unk3c == pSpecs[i].m_nBitsB &&
-				(pSpecs[i].m_dwFlagsAny & pFormat->m_DDPF.dwFlags) != 0 &&
-				(pSpecs[i].m_dwFlagsNone & pFormat->m_DDPF.dwFlags) == 0)
+			TextureFormat *pFormat = (TextureFormat *)pCur->m_pData;
+			if (pFormat->m_RBits == pSpecs[i].m_nBitsR && pFormat->m_GBits == pSpecs[i].m_nBitsG &&
+				pFormat->m_BBits == pSpecs[i].m_nBitsB &&
+				(pSpecs[i].m_dwFlagsAny & pFormat->m_PF.dwFlags) != 0 &&
+				(pSpecs[i].m_dwFlagsNone & pFormat->m_PF.dwFlags) == 0)
 			{
 				return pFormat;
 			}
@@ -544,16 +544,16 @@ void FUN_1001f600()
 	DAT_1006284c = 0;
 	DAT_10062850 = 0;
 	DAT_10062854 = 0;
-	for (LTLink *pCur = DAT_10062858.m_pNext; pCur != &DAT_10062858; pCur = pCur->m_pNext)
+	for (LTLink *pCur = g_TextureFormatList.m_pNext; pCur != &g_TextureFormatList; pCur = pCur->m_pNext)
 	{
-		UnkType_TextureFormat *pFormat = (UnkType_TextureFormat *)pCur->m_pData;
-		if (pFormat->m_DDPF.dwFlags & DDPF_FOURCC)
+		TextureFormat *pFormat = (TextureFormat *)pCur->m_pData;
+		if (pFormat->m_PF.dwFlags & DDPF_FOURCC)
 		{
-			if (pFormat->m_DDPF.dwFourCC == 0x31545844)
+			if (pFormat->m_PF.dwFourCC == 0x31545844)
 				DAT_10062854 = 1;
-			else if (pFormat->m_DDPF.dwFourCC == 0x33545844)
+			else if (pFormat->m_PF.dwFourCC == 0x33545844)
 				DAT_10062850 = 1;
-			else if (pFormat->m_DDPF.dwFourCC == 0x35545844)
+			else if (pFormat->m_PF.dwFourCC == 0x35545844)
 				DAT_1006284c = 1;
 		}
 	}
@@ -569,10 +569,10 @@ void FUN_1001f670()
 	uint32 pixels[16 * 16];
 	int x, y;
 
-	if (DAT_1006287c)
+	if (g_pShadowBlobTexture)
 	{
-		DAT_1006287c->Release();
-		DAT_1006287c = 0;
+		g_pShadowBlobTexture->Release();
+		g_pShadowBlobTexture = 0;
 	}
 	for (y = 0; y < 16; y++)
 	{
@@ -586,28 +586,29 @@ void FUN_1001f670()
 			pixels[y * 16 + x] = ((uint32)(uint8)(uint32)((1.0f - (float)pow(fDist * 0.13333334f, DAT_1004b5d8)) * 255.9f) << 24) | 0xffffff;
 		}
 	}
-	DAT_1006287c = FUN_1001e9f0(pixels, 16, 16, 64);
+	g_pShadowBlobTexture = d3d_CreateTextureFromPixels(pixels, 16, 16, 64);
 }
 
 // NAME: names_proposal.csv CTextureManager::Term (medium, Jupiter): a global function in d3d.ren
+// I don't think this was a real member of CTextureManager; it's just a global function in d3d.ren
 // FUNCTION: D3DREN 0x1001f770
-void FUN_1001f770()
+void d3d_TermTextureManager()
 {
-	if (DAT_10062874)
+	if (g_bTextureManagerInitialized)
 	{
-		FUN_1001f960();
-		DAT_100617e8.Term();
-		if (DAT_1006287c)
+		d3d_FreeAllTextures();
+		g_RTextureBank.Term();
+		if (g_pShadowBlobTexture)
 		{
-			DAT_1006287c->Release();
-			DAT_1006287c = 0;
+			g_pShadowBlobTexture->Release();
+			g_pShadowBlobTexture = 0;
 		}
-		if (DAT_10062880)
+		if (g_pSpecularTexture)
 		{
-			DAT_10062880->Release();
-			DAT_10062880 = 0;
+			g_pSpecularTexture->Release();
+			g_pSpecularTexture = 0;
 		}
-		LTLink *pFormats = &DAT_10062858;
+		LTLink *pFormats = &g_TextureFormatList;
 		LTLink *pCur = pFormats->m_pNext;
 		while (pCur != pFormats)
 		{
@@ -616,8 +617,8 @@ void FUN_1001f770()
 			pCur = pNext;
 		}
 		pFormats->TieOff();
-		memset(DAT_10062830, 0, sizeof(DAT_10062830));
-		DAT_10062874 = 0;
+		memset(g_TextureFormats, 0, sizeof(g_TextureFormats));
+		g_bTextureManagerInitialized = 0;
 	}
 }
 
@@ -662,7 +663,7 @@ void FUN_1001f850(RTexture *pTexture, int bChained)
 	if (pTexture->m_Link.m_pData)
 		pTexture->m_Link.Remove();
 
-	DAT_100617e8.Free(pTexture);
+	g_RTextureBank.Free(pTexture);
 }
 
 // FreeTexture on every RTexture of an LTLink list (the head's m_pData is not used), then ties the head off.
@@ -682,7 +683,7 @@ void FUN_1001f920(LTLink *pList)
 
 // NAME: names_proposal.csv CTextureManager::FreeAllTextures (medium, Jupiter): a global function in d3d.ren
 // FUNCTION: D3DREN 0x1001f960
-void FUN_1001f960()
+void d3d_FreeAllTextures()
 {
 	LTLink *pListHead = &g_Textures;
 	LTLink *pCur = pListHead->m_pNext;
@@ -697,15 +698,16 @@ void FUN_1001f960()
 
 // NAME: names_proposal.csv CTextureManager::ListTextureFormats (medium, Jupiter): a global function in d3d.ren
 // FUNCTION: D3DREN 0x1001f9b0
-void FUN_1001f9b0()
+void d3d_ListTextureFormats()
 {
-	for (LTLink *pCur = DAT_10062858.m_pNext; pCur != &DAT_10062858; pCur = pCur->m_pNext)
-		FUN_1001fa40("", (UnkType_TextureFormat *)pCur->m_pData);
-	FUN_1001fa40("[FULLBRITE] - ", DAT_10062830[FORMAT_FULLBRITE]);
-	FUN_1001fa40("[4444] - ", DAT_10062830[FORMAT_4444]);
-	FUN_1001fa40("[NORMAL] - ", DAT_10062830[FORMAT_NORMAL]);
-	FUN_1001fa40("[INTERFACE] - ", DAT_10062830[FORMAT_INTERFACE]);
-	FUN_1001fa40("[LIGHTMAP] - ", DAT_10062830[FORMAT_LIGHTMAP]);
+	for (LTLink *pCur = g_TextureFormatList.m_pNext; pCur != &g_TextureFormatList; pCur = pCur->m_pNext)
+		d3d_PrintFormatInfo("", (TextureFormat *)pCur->m_pData);
+		
+	d3d_PrintFormatInfo("[FULLBRITE] - ", g_TextureFormats[FORMAT_FULLBRITE]);
+	d3d_PrintFormatInfo("[4444] - ", g_TextureFormats[FORMAT_4444]);
+	d3d_PrintFormatInfo("[NORMAL] - ", g_TextureFormats[FORMAT_NORMAL]);
+	d3d_PrintFormatInfo("[INTERFACE] - ", g_TextureFormats[FORMAT_INTERFACE]);
+	d3d_PrintFormatInfo("[LIGHTMAP] - ", g_TextureFormats[FORMAT_LIGHTMAP]);
 }
 
 // d3d_AddToString (0x1001ff80, defined below the printer): appends the text and a space to pStr and returns the end of the string.
@@ -725,7 +727,7 @@ char *d3d_AddToString(char *pStr, const char *pToAdd);
 // 256 byte arrays (frame 0x200), the source here has them.  d3d_AddToString is therefore written non-inline below so that its code
 // (which is byte-identical) is checked.
 // STUB: D3DREN 0x1001fa40
-void FUN_1001fa40(const char *pStart, UnkType_TextureFormat *pFormat)
+void d3d_PrintFormatInfo(const char *pStart, TextureFormat *pFormat)
 {
 	char spec[256];
 	char fourCC[256];
@@ -735,7 +737,7 @@ void FUN_1001fa40(const char *pStart, UnkType_TextureFormat *pFormat)
 		g_pStruct->ConsolePrint("%sNONE", pStart);
 		return;
 	}
-	if (pFormat->m_DDPF.dwFlags & DDPF_FOURCC)
+	if (pFormat->m_PF.dwFlags & DDPF_FOURCC)
 	{
 		*(uint32 *)fourCC = pFormat->m_DDPF.dwFourCC;
 		fourCC[4] = 0;
@@ -744,48 +746,48 @@ void FUN_1001fa40(const char *pStart, UnkType_TextureFormat *pFormat)
 	else
 	{
 		spec[0] = 0;
-		if (pFormat->m_DDPF.dwFlags & DDPF_ALPHA)
+		if (pFormat->m_PF.dwFlags & DDPF_ALPHA)
 			d3d_AddToString(spec, "DDPF_ALPHA");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_ALPHAPIXELS)
+		else if (pFormat->m_PF.dwFlags & DDPF_ALPHAPIXELS)
 			d3d_AddToString(spec, "DDPF_ALPHAPIXELS");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_ALPHAPREMULT)
+		else if (pFormat->m_PF.dwFlags & DDPF_ALPHAPREMULT)
 			d3d_AddToString(spec, "DDPF_ALPHAPREMULT");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_BUMPLUMINANCE)
+		else if (pFormat->m_PF.dwFlags & DDPF_BUMPLUMINANCE)
 			d3d_AddToString(spec, "DDPF_BUMPLUMINANCE");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_BUMPDUDV)
+		else if (pFormat->m_PF.dwFlags & DDPF_BUMPDUDV)
 			d3d_AddToString(spec, "DDPF_BUMPDUDV");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_COMPRESSED)
+		else if (pFormat->m_PF.dwFlags & DDPF_COMPRESSED)
 			d3d_AddToString(spec, "DDPF_COMPRESSED");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_FOURCC)
+		else if (pFormat->m_PF.dwFlags & DDPF_FOURCC)
 			d3d_AddToString(spec, "DDPF_FOURCC");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_LUMINANCE)
+		else if (pFormat->m_PF.dwFlags & DDPF_LUMINANCE)
 			d3d_AddToString(spec, "DDPF_LUMINANCE");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_PALETTEINDEXED1)
+		else if (pFormat->m_PF.dwFlags & DDPF_PALETTEINDEXED1)
 			d3d_AddToString(spec, "DDPF_PALETTEINDEXED1");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_PALETTEINDEXED2)
+		else if (pFormat->m_PF.dwFlags & DDPF_PALETTEINDEXED2)
 			d3d_AddToString(spec, "DDPF_PALETTEINDEXED2");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_PALETTEINDEXED4)
+		else if (pFormat->m_PF.dwFlags & DDPF_PALETTEINDEXED4)
 			d3d_AddToString(spec, "DDPF_PALETTEINDEXED4");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_PALETTEINDEXED8)
+		else if (pFormat->m_PF.dwFlags & DDPF_PALETTEINDEXED8)
 			d3d_AddToString(spec, "DDPF_PALETTEINDEXED8");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_PALETTEINDEXEDTO8)
+		else if (pFormat->m_PF.dwFlags & DDPF_PALETTEINDEXEDTO8)
 			d3d_AddToString(spec, "DDPF_PALETTEINDEXEDTO8");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_RGB)
+		else if (pFormat->m_PF.dwFlags & DDPF_RGB)
 			d3d_AddToString(spec, "DDPF_RGB");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_RGBTOYUV)
+		else if (pFormat->m_PF.dwFlags & DDPF_RGBTOYUV)
 			d3d_AddToString(spec, "DDPF_RGBTOYUV");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_STENCILBUFFER)
+		else if (pFormat->m_PF.dwFlags & DDPF_STENCILBUFFER)
 			d3d_AddToString(spec, "DDPF_STENCILBUFFER");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_ZBUFFER)
+		else if (pFormat->m_PF.dwFlags & DDPF_ZBUFFER)
 			d3d_AddToString(spec, "DDPF_ZBUFFER");
-		else if (pFormat->m_DDPF.dwFlags & DDPF_ZPIXELS)
+		else if (pFormat->m_PF.dwFlags & DDPF_ZPIXELS)
 			d3d_AddToString(spec, "DDPF_ZPIXELS");
 		else
 			d3d_AddToString(spec, "UNKNOWN");
 	}
-	g_pStruct->ConsolePrint("%s%s - %d bits (%d %d %d %d) (%x %x %x %x)", pStart, spec, pFormat->m_DDPF.dwRGBBitCount,
-		pFormat->m_Unk34, pFormat->m_Unk38, pFormat->m_Unk3c, pFormat->m_Unk40,
-		pFormat->m_DDPF.dwRBitMask, pFormat->m_DDPF.dwGBitMask, pFormat->m_DDPF.dwBBitMask, pFormat->m_DDPF.dwRGBAlphaBitMask);
+	g_pStruct->ConsolePrint("%s%s - %d bits (%d %d %d %d) (%x %x %x %x)", pStart, spec, pFormat->m_PF.dwRGBBitCount,
+		pFormat->m_RBits, pFormat->m_GBits, pFormat->m_BBits, pFormat->m_ABits,
+		pFormat->m_PF.dwRBitMask, pFormat->m_PF.dwGBitMask, pFormat->m_PF.dwBBitMask, pFormat->m_PF.dwRGBAlphaBitMask);
 }
 
 // NAME: d3d_AddToString: names_proposal.csv (high; Jupiter d3d_AddToString(pStr, pToAdd, nBufferLen), here without the length).
@@ -836,14 +838,14 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 
 	if (nStageFlags & 0x100)
 	{
-		if (!DAT_10062830[FORMAT_BUMPMAP])
+		if (!g_TextureFormats[FORMAT_BUMPMAP])
 			goto done;
 		iFormat = FORMAT_BUMPMAP;
 	}
 	else
 	{
 		uint32 dtxFlags = pTextureData->m_Flags;
-		if (!(dtxFlags & DTX_PREFER16BIT) && DAT_10057e2c && DAT_10062830[FORMAT_32BIT])
+		if (!(dtxFlags & DTX_PREFER16BIT) && DAT_10057e2c && g_TextureFormats[FORMAT_32BIT])
 			iFormat = FORMAT_32BIT;
 		else if (dtxFlags & DTX_PREFER5551)
 			iFormat = FORMAT_FULLBRITE;
@@ -892,7 +894,7 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 	if (!FUN_10020ab0(&build, &data, iStartMipmap, nMipmaps, iFormat))
 		goto done;
 
-	pRTexture = (RTexture *)DAT_100617e8.AllocVoid();
+	pRTexture = (RTexture *)g_RTextureBank.AllocVoid();
 	if (!pRTexture)
 	{
 		data.m_pSurface->Release();
@@ -915,7 +917,7 @@ RTexture *FUN_1001fff0(SharedTexture *pSharedTexture, uint32 nStageFlags, uint8 
 	}
 	pRTexture->m_Data.m_nMemory = 0;
 	for (i = iStartMipmap; i < iStartMipmap + nMipmaps; i++)
-		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << DAT_10062830[iFormat]->m_nBytesPP;
+		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << g_TextureFormats[iFormat]->m_BytesPPShift;
 	pRTexture->m_pSharedTexture = build.m_pSharedTexture;
 	if (!(bAdditional & 1))
 		build.m_pSharedTexture->m_pRenderData = pRTexture;
@@ -968,7 +970,7 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 	DDSURFACEDESC2 ddsdSurf;
 	DDSURFACEDESC2 ddsdLock;
 	IDirectDrawSurface7 *pSurface;
-	UnkType_TextureFormat *pFormat;
+	TextureFormat *pFormat;
 	TextureMipData *pMip;
 	uint32 bpp, i, surfWidth, surfHeight;
 
@@ -983,7 +985,7 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 		bpp = BPP_32;
 
 	pSurface = pTexture->m_Data.m_pSurface;
-	pFormat = DAT_10062830[pTexture->m_Unk48];
+	pFormat = g_TextureFormats[pTexture->m_Unk48];
 	ddsdSurf.dwSize = sizeof(DDSURFACEDESC2);
 	ddsdSurf.dwFlags = DDSD_HEIGHT | DDSD_WIDTH;
 	pSurface->GetSurfaceDesc(&ddsdSurf);
@@ -1114,7 +1116,7 @@ int r_TransferTexture(RTexture *pTexture, TextureData *pTextureData)
 				ddsdTemp.ddpfPixelFormat.dwFlags |= DDPF_FOURCC;
 				ddsdTemp.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
 				ddsdTemp.ddpfPixelFormat.dwFourCC = fourCC;
-				if (DAT_10057810->CreateSurface(&ddsdTemp, &pTemp, 0) != 0)
+				if (g_pDD->CreateSurface(&ddsdTemp, &pTemp, 0) != 0)
 					return 0;
 
 				memset(&ddsdTempLock, 0, sizeof(ddsdTempLock));
@@ -1270,7 +1272,7 @@ int FUN_10020ab0(UnkType_RTextureBuild *pBuild, RTextureData *pData, uint32 iSta
 	}
 
 	bSupported = 0;
-	ddsd.ddpfPixelFormat = DAT_10062830[iFormat]->m_DDPF;
+	ddsd.ddpfPixelFormat = g_TextureFormats[iFormat]->m_DDPF;
 	width = ddsd.dwWidth;
 	height = ddsd.dwHeight;
 	if (DAT_1005c984 & D3DPTEXTURECAPS_SQUAREONLY)
@@ -1313,7 +1315,7 @@ ParseColorKey:
 	else
 		pData->m_AlphaRef = 0;
 
-	if (DAT_10057810->CreateSurface(&ddsd, &pData->m_pSurface, 0) != 0)
+	if (g_pDD->CreateSurface(&ddsd, &pData->m_pSurface, 0) != 0)
 	{
 		AddDebugMessage(4, "Unable to create (%dx%d) texture surface.", ddsd.dwWidth, ddsd.dwHeight);
 		return 0;
@@ -1488,14 +1490,14 @@ RTexture *FUN_10021290(UnkType_RTextureBuild *pBuild, int bAdditional)
 
 	if (nStageFlags & 0x100)
 	{
-		if (!DAT_10062830[FORMAT_BUMPMAP])
+		if (!g_TextureFormats[FORMAT_BUMPMAP])
 			return 0;
 		iFormat = FORMAT_BUMPMAP;
 	}
 	else
 	{
 		uint32 dtxFlags = pTextureData->m_Flags;
-		if (!(dtxFlags & DTX_PREFER16BIT) && DAT_10057e2c && DAT_10062830[FORMAT_32BIT])
+		if (!(dtxFlags & DTX_PREFER16BIT) && DAT_10057e2c && g_TextureFormats[FORMAT_32BIT])
 			iFormat = FORMAT_32BIT;
 		else if (dtxFlags & DTX_PREFER5551)
 			iFormat = FORMAT_FULLBRITE;
@@ -1564,7 +1566,7 @@ RTexture *FUN_10021290(UnkType_RTextureBuild *pBuild, int bAdditional)
 			return 0;
 		goto ParseColorKey;
 	}
-	ddsd.ddpfPixelFormat = DAT_10062830[iFormat]->m_DDPF;
+	ddsd.ddpfPixelFormat = g_TextureFormats[iFormat]->m_DDPF;
 	AdjustAspectRatio(ddsd.dwWidth, ddsd.dwHeight, &ddsd.dwWidth, &ddsd.dwHeight);
 
 ParseColorKey:
@@ -1593,7 +1595,7 @@ ParseColorKey:
 	if (cParse.ParseFind("AlphaRef", 0, 1))
 		alphaRef = atoi(cParse.m_Args[1]);
 
-	if (DAT_10057810->CreateSurface(&ddsd, &pSurface, 0) != 0)
+	if (g_pDD->CreateSurface(&ddsd, &pSurface, 0) != 0)
 	{
 		AddDebugMessage(4, "Unable to create (%dx%d) texture surface.", ddsd.dwWidth, ddsd.dwHeight);
 		return 0;
@@ -1604,7 +1606,7 @@ ParseColorKey:
 	fU = (float)(1 << pTextureData->m_Header.m_Extra[4]) * (1.0f / (float)width);
 	fV = (float)(1 << pTextureData->m_Header.m_Extra[4]) * (1.0f / (float)height);
 
-	pRTexture = DAT_100617e8.Allocate();
+	pRTexture = g_RTextureBank.Allocate();
 	if (!pRTexture)
 	{
 		pSurface->Release();
@@ -1629,7 +1631,7 @@ ParseColorKey:
 	}
 	pRTexture->m_Data.m_nMemory = 0;
 	for (i = iStartMipmap; i < iStartMipmap + nMipmaps; i++)
-		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << DAT_10062830[iFormat]->m_nBytesPP;
+		pRTexture->m_Data.m_nMemory += (pTextureData->m_Mips[i].m_Width * pTextureData->m_Mips[i].m_Height) << g_TextureFormats[iFormat]->m_nBytesPP;
 	pRTexture->m_pSharedTexture = pBuild->m_pSharedTexture;
 	if (!(bAdditional & 1))
 		pBuild->m_pSharedTexture->m_pRenderData = pRTexture;

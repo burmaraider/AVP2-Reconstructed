@@ -661,7 +661,7 @@ void FUN_100356d5();						// 0x100356d5
 void FUN_10034ebb();						// 0x10034ebb
 void FUN_10035771();						// 0x10035771
 void FUN_100235bb(int a1);					// 0x100235bb
-void FUN_100235e1();						// 0x100235e1 (empty)
+void d3d_NullCallback();						// 0x100235e1 (empty)
 void FUN_100235e2();						// 0x100235e2
 
 
@@ -732,7 +732,7 @@ void FUN_100144b0(int nMode)
 	if (DAT_1005c7e0)
 		FUN_100356d5();
 	else
-		FUN_100235e1();
+		d3d_NullCallback();
 }
 
 void FUN_100147b0(WorldPoly *pPoly, UnkType_PolyVertex **ppVerts, int *pnVerts);
@@ -771,7 +771,7 @@ void FUN_100145f0(int a1)
 	{
 		FUN_100235bb(a1);
 		FUN_100235e2();
-		FUN_100235e1();
+		d3d_NullCallback();
 	}
 	FUN_1000ac8a();
 	FUN_10007976();
@@ -782,7 +782,7 @@ void FUN_100145f0(int a1)
 	if (DAT_1005c7e0)
 		FUN_10035771();
 	else
-		FUN_100235e1();
+		d3d_NullCallback();
 
 	if (DAT_10058c68)
 	{
@@ -997,14 +997,14 @@ void d3d_FullDrawScene(SceneDesc *pDesc)
 		if (DAT_1005c7e0)
 			FUN_100356d5();
 		else
-			FUN_100235e1();
+			d3d_NullCallback();
 		FUN_10039510();
 
 		if (DAT_10058c90)
 		{
 			FUN_100235bb(0);
 			FUN_100235e2();
-			FUN_100235e1();
+			d3d_NullCallback();
 		}
 		FUN_1000ac8a();
 		FUN_10007976();
@@ -1015,7 +1015,7 @@ void d3d_FullDrawScene(SceneDesc *pDesc)
 		if (DAT_1005c7e0)
 			FUN_10035771();
 		else
-			FUN_100235e1();
+			d3d_NullCallback();
 		if (DAT_10058c68)
 		{
 			FUN_1000a27b(g_NormalTextureStage);	// the exe calls the out-of-line copy (unit unk/100098d0) here
@@ -1802,7 +1802,7 @@ extern uint8 DAT_1005a104[256];
 extern uint8 DAT_1005a204[256];
 // GLOBAL: D3DREN 0x1006cd70
 extern void (*DAT_1006cd70)();	// guess: optional callback run after the solid objects (RenderScene sets it)
-void __fastcall FUN_1002cc80(LTVector *pPos, uint32 *pSpecular);	// 0x1002cc80: the table fog hook
+void __fastcall d3d_NullPreFrameCallback(LTVector *pPos, uint32 *pSpecular);	// 0x1002cc80: the table fog hook
 // GLOBAL: D3DREN 0x10057794
 extern int DAT_10057794;
 // GLOBAL: D3DREN 0x10056280
@@ -1873,7 +1873,7 @@ int d3d_RenderScene(SceneDesc *pDesc)
 	Counter cCounter;
 	uint8 aScratch[0x5000];
 
-	if (!pDesc || !DAT_10057818 || !g_pD3DDevice || !DAT_10057810 || !DAT_1005de40)
+	if (!pDesc || !g_pBackBuffer || !g_pD3DDevice || !g_pDD || !g_bIn3D)
 		return 0;
 
 	// Can't render cameras while in optimized 2d.
@@ -1887,10 +1887,10 @@ int d3d_RenderScene(SceneDesc *pDesc)
 	{
 		IDirectDrawSurface7 *pOld = g_pOffscreen;
 
-		g_pOffscreen = DAT_10057818;
-		DAT_10057818 = pOld;
-		g_pOffscreen->AddAttachedSurface(DAT_10057820);
-		DAT_10057818->DeleteAttachedSurface(0, DAT_10057820);
+		g_pOffscreen = g_pBackBuffer;
+		g_pBackBuffer = pOld;
+		g_pOffscreen->AddAttachedSurface(g_pZBuffer);
+		g_pBackBuffer->DeleteAttachedSurface(0, g_pZBuffer);
 		g_pD3DDevice->SetRenderTarget(g_pOffscreen, 0);
 		DAT_1005a378 = g_CV_RenderToFront.m_IntVal;
 	}
@@ -1929,7 +1929,7 @@ int d3d_RenderScene(SceneDesc *pDesc)
 		DAT_10057990 = (1.0f / DAT_100578a0) * 255.0f;
 
 		if (g_CV_TableFog.m_Unk00)
-			g_pfnCalcFogAlpha = FUN_1002cc80;
+			g_pfnCalcFogAlpha = d3d_NullPreFrameCallback;
 		else if (g_CV_VFog.m_Unk00)
 		{
 			DAT_100584f8 = g_CV_VFogMaxYVal.m_Unk04 - g_CV_VFogMinYVal.m_Unk04;
@@ -2059,7 +2059,7 @@ int d3d_RenderScene(SceneDesc *pDesc)
 	if (g_CV_DrawTerrainSections.m_Unk00 && DAT_10056770)
 		FUN_10017980(DAT_10056770);
 
-	FUN_100235e1();
+	d3d_NullCallback();
 
 	if (!DAT_100584e4 || DAT_10057e1c != DAT_10057a58)
 	{
@@ -2093,7 +2093,7 @@ extern int DAT_1005a330;
 
 // guess: initialises the pools the poly drawing code allocates its queue nodes and buckets from.
 // FUNCTION: D3DREN 0x100184f0
-void FUN_100184f0()
+void d3d_InitPolyDrawPools()
 {
 	FUN_10010800();
 	DAT_10058800 = 0;
@@ -2106,7 +2106,7 @@ void FUN_100184f0()
 
 // guess: tears the pools down again.
 // FUNCTION: D3DREN 0x10018550
-void FUN_10018550()
+void d3d_TermPolyDrawPools()
 {
 	FUN_1001083a();
 	sb_Term(&DAT_10058648);

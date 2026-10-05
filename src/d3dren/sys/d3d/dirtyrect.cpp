@@ -131,7 +131,7 @@ void FUN_1002231c()
 	RECT rcDest;
 	uint32 i;
 
-	if (DAT_10057814)
+	if (g_pPrimary)
 	{
 		GetClientRect(g_hWnd, &rcClient);
 		ClientToScreen(g_hWnd, (POINT *)&rcClient.left);
@@ -142,7 +142,7 @@ void FUN_1002231c()
 			rcDest.top = g_invalidRect[i].top + rcClient.top;
 			rcDest.right = g_invalidRect[i].right + rcClient.left;
 			rcDest.bottom = g_invalidRect[i].bottom + rcClient.top;
-			DAT_10057814->Blt(&rcDest, g_pOffscreen, (RECT *)&g_invalidRect[i], DDBLT_WAIT, 0);
+			g_pPrimary->Blt(&rcDest, g_pOffscreen, (RECT *)&g_invalidRect[i], DDBLT_WAIT, 0);
 		}
 		g_invalidRectCount = 0;
 	}
@@ -157,14 +157,14 @@ void DirtyRectSwap()
 	if (g_invalidRectCount == 0)
 		return;
 
-	if (DAT_10057814)
+	if (g_pPrimary)
 	{
 		FUN_1002231c();
 		return;
 	}
 
 	for (i = 0; i < g_invalidRectCount; i++)
-		DAT_10057818->Blt((RECT *)&g_invalidRect[i], g_pOffscreen, (RECT *)&g_invalidRect[i], DDBLT_WAIT, 0);
+		g_pBackBuffer->Blt((RECT *)&g_invalidRect[i], g_pOffscreen, (RECT *)&g_invalidRect[i], DDBLT_WAIT, 0);
 	g_invalidRectCount = 0;
 }
 

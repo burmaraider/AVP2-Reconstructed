@@ -173,7 +173,7 @@ void UnkType_LMTexturePools::FUN_10034db8(PFN_CreateLMTexture pfnCreate)
 	uint32 size;
 	RTexture *pTexture;
 
-	if (DAT_10062830[FORMAT_LIGHTMAP])
+	if (g_TextureFormats[FORMAT_LIGHTMAP])
 	{
 		for (i = 0; i < 5; i++)
 		{

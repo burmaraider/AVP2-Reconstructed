@@ -85,7 +85,7 @@ struct UnkType_StageUV
 	float	m_Unk04;
 };
 extern UnkType_StageUV DAT_10061810[8];	// per stage UV scale (unit unk/10007930)
-extern IDirectDrawSurface7 *DAT_10062880;	// guess: the specular lookup table texture (FUN_1001e910)
+extern IDirectDrawSurface7 *g_pSpecularTexture;	// guess: the specular lookup table texture (d3d_BuildSpecularLookupTexture)
 extern float DAT_100561a0;		// guess: ViewParams (+0x4a8) component the bump matrix angle is built from
 extern float DAT_100561a8;		// guess: ViewParams (+0x4b0)
 
@@ -326,7 +326,7 @@ void ModelDraw::FUN_1002476b()
 			m_Unk5e8 = 2;
 			m_Unk38 = 0x101;
 			g_pD3DDevice->GetTexture(2, &pOldTex);
-			g_pD3DDevice->SetTexture(2, DAT_10062880);
+			g_pD3DDevice->SetTexture(2, g_pSpecularTexture);
 			StageStateSet ss0(1, D3DTSS_TEXCOORDINDEX, 0);
 			StageStateSet ss1(1, D3DTSS_COLOROP, D3DTOP_BUMPENVMAP);
 			StageStateSet ss2(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -354,11 +354,11 @@ void ModelDraw::FUN_1002476b()
 		}
 		else
 		{
-			if (g_CV_ModelSpecular.m_IntVal && DAT_1005c80c && m_pModel->m_bSpecularEnable && DAT_10062880)
+			if (g_CV_ModelSpecular.m_IntVal && DAT_1005c80c && m_pModel->m_bSpecularEnable && g_pSpecularTexture)
 			{
 				m_Unk5e8 = 2;
 					g_pD3DDevice->GetTexture(1, &pOldTex);
-				g_pD3DDevice->SetTexture(1, DAT_10062880);
+				g_pD3DDevice->SetTexture(1, g_pSpecularTexture);
 				StageStateSet(1, D3DTSS_COLOROP, D3DTOP_ADD);
 				StageStateSet(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 				StageStateSet(1, D3DTSS_COLORARG2, D3DTA_CURRENT);
